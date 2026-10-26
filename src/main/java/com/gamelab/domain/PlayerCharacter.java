@@ -7,7 +7,7 @@ public class PlayerCharacter {
     private final String characterClass;
 
     private int health;
-    private final int maxHealth;
+    private int maxHealth;
     private int damage;
     private int defense;
 
@@ -80,8 +80,8 @@ public class PlayerCharacter {
     }
 
     private void maxHealthIncrease() {
-        health += 10;
-        health = Math.min(health, maxHealth);
+        maxHealth += 10;
+        health = Math.min(maxHealth, health + 10);
     }
 
     public void increaseDefense(int amount) {
