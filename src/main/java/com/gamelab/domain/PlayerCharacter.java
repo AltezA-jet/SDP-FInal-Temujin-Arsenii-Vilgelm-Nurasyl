@@ -139,4 +139,22 @@ public class PlayerCharacter {
     public boolean isAlive() {
         return health > 0;
     }
+    
+    public void spendStatPointOnDamage() {
+        if (statPoints <= 0) {
+            throw new IllegalStateException("No stat points available");
+        }
+
+        statPoints--;
+        damage += 2;
+    }
+
+    public void spendStatPointOnDefense() {
+        if (statPoints <= 0) {
+            throw new IllegalStateException("No stat points available");
+        }
+
+        statPoints--;
+        defense += 2;
+    }
 }

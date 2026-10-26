@@ -91,4 +91,76 @@ class CharacterBuilderTest {
                 () -> new PlayerCharacter("", "Warrior", 100, 10, 5)
         );
     }
+    @Test
+    void shouldRejectInvalidCharacterStats() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new CharacterBuilder()
+                        .name("Invalid")
+                        .maxHealth(0)
+                        .build()
+        );
+    }
+
+    @Test
+    void shouldRejectNegativeDamage() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new CharacterBuilder()
+                        .name("Invalid")
+                        .damage(-1)
+                        .build()
+        );
+    }
+    
+    @Test
+    void shouldSpendStatPointToIncreaseDamage() {
+        PlayerCharacter player = CharacterBuilder
+                .warrior("Shadow")
+                .build();
+
+        player.gainExperience(100);
+        player.spendStatPointOnDamage();
+
+        assertEquals(1, player.getStatPoints());
+        assertEquals(22, player.getDamage());
+    }
+
+    @Test
+    void shouldNotSpendStatPointWhenNoneAvailable() {
+        PlayerCharacter player = CharacterBuilder
+                .warrior("Shadow")
+                .build();
+
+        assertThrows(
+                IllegalStateException.class,
+                player::spendStatPointOnDamage
+        );
+    }
+    
+    @Test
+    void shouldNotAllowHealingDeadCharacterAboveZeroWithoutResurrection() {
+        PlayerCharacter player = CharacterBuilder
+                .warrior("Shadow")
+                .build();
+
+        player.takeDamage(1000);
+        player.heal(50);
+
+        assertEquals(50, player.getHealth());
+        assertTrue(player.isAlive());
+    }
+
+    @Test
+    void shouldKeepExperienceRemainderAfterLevelUp() {
+        PlayerCharacter player = CharacterBuilder
+                .warrior("Shadow")
+                .build();
+
+        player.gainExperience(150);
+
+        assertEquals(2, player.getLevel());
+        assertEquals(50, player.getExperience());
+    }
+
 }
