@@ -1,0 +1,42 @@
+@startuml
+interface EnemyBehavior {
+  +update(enemy: Enemy, playerX: double, playerY: double, deltaSeconds: double): void
+}
+class ChaseBehavior
+class DefensiveBehavior
+class RangedBehavior
+EnemyBehavior <|.. ChaseBehavior
+EnemyBehavior <|.. DefensiveBehavior
+EnemyBehavior <|.. RangedBehavior
+class Enemy {
+  -id: String
+  -name: String
+  -health: int
+  -maxHealth: int
+  -damage: int
+  -x: double
+  -y: double
+  -behavior: EnemyBehavior
+  +takeDamage(amount: int): void
+  +update(playerX: double, playerY: double, deltaSeconds: double): void
+  +setBehavior(behavior: EnemyBehavior): void
+  +isAlive(): boolean
+}
+Enemy --> EnemyBehavior
+abstract class EnemyCreator {
+  +createEnemy(id: String, x: double, y: double): Enemy
+}
+class SkeletonCreator
+class SlimeCreator
+class BossCreator
+EnemyCreator <|-- SkeletonCreator
+EnemyCreator <|-- SlimeCreator
+EnemyCreator <|-- BossCreator
+class CombatService {
+  +attack(player: PlayerCharacter, enemy: Enemy, strategy: PlayerCombatStrategy): int
+  +damageEnemy(enemy: Enemy, damage: int): int
+}
+CombatService --> Enemy
+CombatService --> GameEventBus
+CombatService --> RewardService
+@enduml

@@ -1,0 +1,4 @@
+package com.gamelab.pattern.strategy;
+import com.gamelab.domain.Enemy;
+/** Holds a support position. Summon requests are exposed for the wave/game controller to consume. */
+public final class SummonBehavior implements EnemyBehavior { private final double preferredDistance; private double elapsed; private boolean summonRequested; private final double interval; public SummonBehavior(){this(150,8);} public SummonBehavior(double distance,double interval){if(distance<=0||interval<=0)throw new IllegalArgumentException("Values must be positive");preferredDistance=distance;this.interval=interval;} public void update(Enemy e,double x,double y,double dt){double d=Math.hypot(x-e.getX(),y-e.getY());if(d<preferredDistance*.8)e.moveAway(x,y,dt);else if(d>preferredDistance*1.2)e.moveTowards(x,y,dt);elapsed+=dt;if(elapsed>=interval){elapsed-=interval;summonRequested=true;}} public boolean consumeSummonRequest(){boolean result=summonRequested;summonRequested=false;return result;} }
