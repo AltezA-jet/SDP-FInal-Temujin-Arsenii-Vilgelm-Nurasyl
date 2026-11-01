@@ -1,27 +1,37 @@
 package com.gamelab.demo;
 
+import com.gamelab.application.CombatService;
+import com.gamelab.application.MinibossRuneRewardService;
 import com.gamelab.application.PotionService;
 import com.gamelab.application.RewardService;
+import com.gamelab.application.RuneCombatService;
+import com.gamelab.application.RuneService;
+import com.gamelab.application.WeaponUpgradeResult;
+import com.gamelab.application.WeaponUpgradeService;
+import com.gamelab.domain.Enemy;
 import com.gamelab.domain.PlayerCharacter;
 import com.gamelab.domain.economy.CoinWallet;
 import com.gamelab.domain.inventory.Inventory;
-import com.gamelab.domain.item.BasicWeapon;
 import com.gamelab.domain.item.Potion;
-import com.gamelab.domain.item.PotionType;
 import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.item.WeaponCatalog;
+import com.gamelab.domain.rune.Rune;
+import com.gamelab.domain.rune.RuneLoadout;
+import com.gamelab.domain.rune.RuneType;
 import com.gamelab.domain.shop.PurchaseResult;
+import com.gamelab.domain.shop.ShadowfallShopCatalog;
 import com.gamelab.domain.shop.Shop;
-import com.gamelab.pattern.decorator.FireWeaponDecorator;
-import com.gamelab.pattern.decorator.PoisonWeaponDecorator;
+import com.gamelab.pattern.factory.EnemyFactory;
+import com.gamelab.pattern.factory.EnemyType;
 import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.pattern.observer.GameLogObserver;
+import com.gamelab.pattern.strategy.BalancedStrategy;
 
 public class ItemSystemDemo {
 
     public static void main(String[] args) {
-
         System.out.println(
-                "=== SHADOWFALL ITEM SYSTEM DEMO ==="
+                "=== SHADOWFALL ITEM AND RUNE SYSTEM ==="
         );
 
         GameEventBus eventBus = new GameEventBus();
@@ -39,101 +49,204 @@ public class ItemSystemDemo {
                         5
                 );
 
-        CoinWallet wallet = new CoinWallet(200);
-        Inventory inventory = new Inventory(10);
+        CoinWallet wallet =
+                new CoinWallet(1000);
+
+        Inventory inventory =
+                new Inventory(10);
 
         RewardService rewardService =
                 new RewardService(eventBus);
 
+        CombatService combatService =
+                new CombatService(
+                        eventBus,
+                        rewardService,
+                        wallet
+                );
+
+        RuneCombatService runeCombatService =
+                new RuneCombatService(combatService);
+
+        RuneService runeService =
+                new RuneService(eventBus);
+
+        MinibossRuneRewardService
+                runeRewardService =
+                new MinibossRuneRewardService(
+                        eventBus
+                );
+
+        WeaponUpgradeService upgradeService =
+                new WeaponUpgradeService();
+
         PotionService potionService =
                 new PotionService(eventBus);
 
-        Shop shop = new Shop(eventBus);
+        Shop shop =
+                ShadowfallShopCatalog
+                        .createDefaultShop(eventBus);
 
-        Weapon basicSword = new BasicWeapon(
-                "Iron Sword",
-                "Basic knight weapon.",
-                100,
-                "KNIGHT",
-                10
+        Weapon starterSword =
+                WeaponCatalog.createByLevel(1);
+
+        inventory.addItem(starterSword);
+
+        inventory.equipWeapon(
+                starterSword,
+                player.getCharacterClass()
         );
 
-        Weapon upgradedSword =
-                new PoisonWeaponDecorator(
-                        new FireWeaponDecorator(
-                                basicSword
-                        )
+        RuneLoadout loadout =
+                new RuneLoadout(starterSword);
+
+        System.out.println(
+                "\n--- Starting equipment ---"
+        );
+
+        printWeapon(loadout, inventory, wallet);
+
+        System.out.println(
+                "\n--- Weapon upgrade ---"
+        );
+
+        WeaponUpgradeResult upgradeResult =
+                upgradeService.upgrade(
+                        loadout,
+                        inventory,
+                        wallet,
+                        player.getCharacterClass()
                 );
 
-        Potion healthPotion = new Potion(
-                "Health Potion",
-                "Restores 50 health points.",
-                30,
-                "ALL",
-                PotionType.HEALTH,
-                50
+        System.out.println(
+                upgradeResult.message()
         );
 
+        if (upgradeResult.success()) {
+            loadout =
+                    upgradeResult.runeLoadout();
+        }
 
-
-        shop.addItem(upgradedSword);
-        shop.addItem(healthPotion);
-
+        printWeapon(loadout, inventory, wallet);
 
         System.out.println(
-                "\n--- Enemy reward ---"
+                "\n--- Buying Haste Rune ---"
         );
 
-        rewardService.grantEnemyReward(
-                "Skeleton",
-                50,
-                20,
-                wallet,
-                player
-        );
+        Rune hasteRune =
+                findShopRune(
+                        shop,
+                        RuneType.HASTE
+                );
 
-        System.out.println(
-                "Coins: " + wallet.getBalance()
-        );
-
-        System.out.println(
-                "\n--- Buying upgraded weapon ---"
-        );
-
-        PurchaseResult weaponPurchase =
+        PurchaseResult hastePurchase =
                 shop.purchase(
-                        upgradedSword,
+                        hasteRune,
                         player.getCharacterClass(),
                         wallet,
                         inventory
                 );
 
         System.out.println(
-                weaponPurchase.message()
-        );
-
-        inventory.equipWeapon(
-                upgradedSword,
-                player.getCharacterClass()
+                hastePurchase.message()
         );
 
         System.out.println(
-                "Equipped weapon: "
-                        + inventory
-                        .getEquippedWeapon()
-                        .orElseThrow()
-                        .getName()
+                runeService.installRune(
+                        hasteRune,
+                        loadout,
+                        inventory
+                ).message()
         );
 
         System.out.println(
-                "Weapon damage bonus: +"
-                        + inventory
-                        .getWeaponDamageBonus()
+                "\n--- Miniboss reward ---"
+        );
+
+        System.out.println(
+                runeRewardService.grantStageRune(
+                        1,
+                        inventory
+                ).message()
+        );
+
+        Rune fireRune =
+                findInventoryRune(
+                        inventory,
+                        RuneType.FIRE
+                );
+
+        System.out.println(
+                runeService.installRune(
+                        fireRune,
+                        loadout,
+                        inventory
+                ).message()
+        );
+
+        printWeapon(loadout, inventory, wallet);
+
+        System.out.println(
+                "\n--- Battle against Ice Crawler ---"
+        );
+
+        Enemy iceCrawler = EnemyFactory.create(
+                EnemyType.ICE_CRAWLER,
+                "ice-crawler-1",
+                0,
+                0
+        );
+
+        int firstHit = runeCombatService.attack(
+                player,
+                iceCrawler,
+                new BalancedStrategy(),
+                loadout
+        );
+
+        int secondHit = runeCombatService.attack(
+                player,
+                iceCrawler,
+                new BalancedStrategy(),
+                loadout
+        );
+
+        int thirdHit = runeCombatService.attack(
+                player,
+                iceCrawler,
+                new BalancedStrategy(),
+                loadout
+        );
+
+
+
+        System.out.println(
+                "First hit: " + firstHit
+        );
+
+        System.out.println(
+                "Second hit: " + secondHit
+        );
+
+        System.out.println(
+                "Third hit: " + thirdHit
+        );
+
+        System.out.println(
+                "Enemy alive: "
+                        + iceCrawler.isAlive()
         );
 
         System.out.println(
                 "\n--- Buying and using potion ---"
         );
+
+        Potion healthPotion = shop.getCatalog()
+                .stream()
+                .filter(Potion.class::isInstance)
+                .map(Potion.class::cast)
+                .findFirst()
+                .orElseThrow();
 
         PurchaseResult potionPurchase =
                 shop.purchase(
@@ -147,7 +260,7 @@ public class ItemSystemDemo {
                 potionPurchase.message()
         );
 
-        player.takeDamage(60);
+        player.takeDamage(40);
 
         System.out.println(
                 "Health before potion: "
@@ -168,37 +281,92 @@ public class ItemSystemDemo {
                         + player.getHealth()
         );
 
-
-
-        System.out.println(
-                "\n--- Wave and boss ---"
-        );
-
-        rewardService.completeWave(5);
-
-        rewardService.grantBossReward(
-                "Shadow Knight",
-                200,
-                150,
-                wallet,
-                player
-        );
-
         System.out.println(
                 "\n--- Final state ---"
         );
 
+        printWeapon(loadout, inventory, wallet);
+
         System.out.println(
-                "Coins: " + wallet.getBalance()
+                "Player level: "
+                        + player.getLevel()
         );
 
         System.out.println(
-                "Level: " + player.getLevel()
-        );
-
-        System.out.println(
-                "Experience: "
+                "Player experience: "
                         + player.getExperience()
+        );
+
+        System.out.println(
+                "Recorded events: "
+                        + gameLog.getEntryCount()
+        );
+    }
+
+    private static Rune findShopRune(
+            Shop shop,
+            RuneType runeType
+    ) {
+        return shop.getCatalog()
+                .stream()
+                .filter(Rune.class::isInstance)
+                .map(Rune.class::cast)
+                .filter(rune ->
+                        rune.getRuneType()
+                                == runeType
+                )
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static Rune findInventoryRune(
+            Inventory inventory,
+            RuneType runeType
+    ) {
+        return inventory.getItems()
+                .stream()
+                .filter(Rune.class::isInstance)
+                .map(Rune.class::cast)
+                .filter(rune ->
+                        rune.getRuneType()
+                                == runeType
+                )
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static void printWeapon(
+            RuneLoadout loadout,
+            Inventory inventory,
+            CoinWallet wallet
+    ) {
+        Weapon decoratedWeapon =
+                loadout.createDecoratedWeapon();
+
+        System.out.println(
+                "Weapon: "
+                        + decoratedWeapon.getName()
+        );
+
+        System.out.println(
+                "Damage bonus: +"
+                        + decoratedWeapon
+                        .getDamageBonus()
+        );
+
+        System.out.printf(
+                "Attack speed: %.2f%n",
+                decoratedWeapon.getAttackSpeed()
+        );
+
+        System.out.println(
+                "Rune slots: "
+                        + loadout
+                        .getInstalledRunes()
+                        .size()
+                        + "/"
+                        + loadout.getWeapon()
+                        .getRuneSlotCount()
         );
 
         System.out.println(
@@ -207,8 +375,8 @@ public class ItemSystemDemo {
         );
 
         System.out.println(
-                "Recorded events: "
-                        + gameLog.getEntryCount()
+                "Coins: "
+                        + wallet.getBalance()
         );
     }
 }
