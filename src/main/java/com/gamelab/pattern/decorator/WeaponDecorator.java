@@ -39,4 +39,19 @@ public abstract class WeaponDecorator implements Weapon {
     public int getDamageBonus() {
         return wrappedWeapon.getDamageBonus();
     }
+
+    @Override
+    public double getAttackSpeed() {
+        return wrappedWeapon.getAttackSpeed();
+    }
+
+    @Override
+    public int getRuneSlotCount() {
+        return wrappedWeapon.getRuneSlotCount();
+    }
+
+    @Override
+    public int getUpgradeLevel() {
+        return wrappedWeapon.getUpgradeLevel();
+    }
 }

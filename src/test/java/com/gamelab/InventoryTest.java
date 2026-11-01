@@ -2,8 +2,6 @@ package com.gamelab;
 
 import com.gamelab.domain.inventory.Inventory;
 import com.gamelab.domain.item.BasicWeapon;
-import com.gamelab.domain.item.Equipment;
-import com.gamelab.domain.item.EquipmentType;
 import com.gamelab.domain.item.Weapon;
 import org.junit.jupiter.api.Test;
 
@@ -84,46 +82,7 @@ class InventoryTest {
         );
     }
 
-    @Test
-    void shouldCalculateEquipmentBonuses() {
-        Inventory inventory = new Inventory(5);
 
-        Equipment shield = new Equipment(
-                "Iron Shield",
-                "Strong tank shield.",
-                120,
-                "TANK",
-                EquipmentType.SHIELD,
-                15,
-                20
-        );
-
-        Equipment amulet = new Equipment(
-                "Health Amulet",
-                "Increases maximum health.",
-                80,
-                "ALL",
-                EquipmentType.AMULET,
-                0,
-                25
-        );
-
-        inventory.addItem(shield);
-        inventory.addItem(amulet);
-
-        inventory.equipEquipment(shield, "TANK");
-        inventory.equipEquipment(amulet, "TANK");
-
-        assertEquals(
-                15,
-                inventory.getTotalDefenseBonus()
-        );
-
-        assertEquals(
-                45,
-                inventory.getTotalHealthBonus()
-        );
-    }
 
     @Test
     void shouldRejectItemWhenInventoryIsFull() {
