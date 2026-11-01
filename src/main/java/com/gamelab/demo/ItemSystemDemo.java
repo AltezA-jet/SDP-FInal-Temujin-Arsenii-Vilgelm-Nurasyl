@@ -6,8 +6,6 @@ import com.gamelab.domain.PlayerCharacter;
 import com.gamelab.domain.economy.CoinWallet;
 import com.gamelab.domain.inventory.Inventory;
 import com.gamelab.domain.item.BasicWeapon;
-import com.gamelab.domain.item.Equipment;
-import com.gamelab.domain.item.EquipmentType;
 import com.gamelab.domain.item.Potion;
 import com.gamelab.domain.item.PotionType;
 import com.gamelab.domain.item.Weapon;
@@ -76,19 +74,11 @@ public class ItemSystemDemo {
                 50
         );
 
-        Equipment shield = new Equipment(
-                "Iron Shield",
-                "Strong tank and knight shield.",
-                120,
-                "KNIGHT",
-                EquipmentType.SHIELD,
-                15,
-                20
-        );
+
 
         shop.addItem(upgradedSword);
         shop.addItem(healthPotion);
-        shop.addItem(shield);
+
 
         System.out.println(
                 "\n--- Enemy reward ---"
@@ -178,31 +168,7 @@ public class ItemSystemDemo {
                         + player.getHealth()
         );
 
-        System.out.println(
-                "\n--- Item pickup ---"
-        );
 
-        rewardService.pickupItem(
-                shield,
-                inventory
-        );
-
-        inventory.equipEquipment(
-                shield,
-                player.getCharacterClass()
-        );
-
-        System.out.println(
-                "Defense bonus from equipment: +"
-                        + inventory
-                        .getTotalDefenseBonus()
-        );
-
-        System.out.println(
-                "Health bonus from equipment: +"
-                        + inventory
-                        .getTotalHealthBonus()
-        );
 
         System.out.println(
                 "\n--- Wave and boss ---"

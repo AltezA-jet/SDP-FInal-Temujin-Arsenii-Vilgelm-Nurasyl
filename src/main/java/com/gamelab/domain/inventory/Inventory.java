@@ -1,8 +1,7 @@
 package com.gamelab.domain.inventory;
 
 import com.gamelab.domain.Item;
-import com.gamelab.domain.item.Equipment;
-import com.gamelab.domain.item.EquipmentType;
+
 import com.gamelab.domain.item.Weapon;
 
 import java.util.ArrayList;
@@ -19,8 +18,6 @@ public final class Inventory {
 
     private Weapon equippedWeapon;
 
-    private final Map<EquipmentType, Equipment>
-            equippedEquipment;
 
     public Inventory(int capacity) {
         if (capacity <= 0) {
@@ -31,8 +28,7 @@ public final class Inventory {
 
         this.capacity = capacity;
         this.items = new ArrayList<>();
-        this.equippedEquipment =
-                new EnumMap<>(EquipmentType.class);
+
     }
 
     public void addItem(Item item) {
@@ -65,8 +61,7 @@ public final class Inventory {
             equippedWeapon = null;
         }
 
-        equippedEquipment.values()
-                .removeIf(equipment -> equipment == item);
+
 
         return true;
     }
@@ -92,29 +87,7 @@ public final class Inventory {
         equippedWeapon = weapon;
     }
 
-    public void equipEquipment(
-            Equipment equipment,
-            String characterClass
-    ) {
-        Objects.requireNonNull(
-                equipment,
-                "Equipment cannot be null"
-        );
 
-        ensureItemExists(equipment);
-
-        if (!equipment.canBeUsedBy(characterClass)) {
-            throw new IllegalArgumentException(
-                    "This character cannot use "
-                            + equipment.getName()
-            );
-        }
-
-        equippedEquipment.put(
-                equipment.getEquipmentType(),
-                equipment
-        );
-    }
 
     private void ensureItemExists(Item item) {
         if (!items.contains(item)) {
@@ -128,10 +101,7 @@ public final class Inventory {
         return Optional.ofNullable(equippedWeapon);
     }
 
-    public Map<EquipmentType, Equipment>
-    getEquippedEquipment() {
-        return Map.copyOf(equippedEquipment);
-    }
+
 
     public int getWeaponDamageBonus() {
         if (equippedWeapon == null) {
@@ -141,19 +111,9 @@ public final class Inventory {
         return equippedWeapon.getDamageBonus();
     }
 
-    public int getTotalDefenseBonus() {
-        return equippedEquipment.values()
-                .stream()
-                .mapToInt(Equipment::getDefenseBonus)
-                .sum();
-    }
 
-    public int getTotalHealthBonus() {
-        return equippedEquipment.values()
-                .stream()
-                .mapToInt(Equipment::getHealthBonus)
-                .sum();
-    }
+
+
 
     public List<Item> getItems() {
         return List.copyOf(items);
