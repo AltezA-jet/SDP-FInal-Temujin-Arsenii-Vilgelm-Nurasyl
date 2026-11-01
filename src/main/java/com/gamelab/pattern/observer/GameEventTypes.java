@@ -31,6 +31,9 @@ public final class GameEventTypes {
     public static final String RUNE_REMOVED =
             "RUNE_REMOVED";
 
+    public static final String RUNE_REWARDED =
+            "RUNE_REWARDED";
+
     private GameEventTypes() {
     }
 }
