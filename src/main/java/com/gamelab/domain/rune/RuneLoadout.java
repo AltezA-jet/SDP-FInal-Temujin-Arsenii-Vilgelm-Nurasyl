@@ -2,6 +2,7 @@ package com.gamelab.domain.rune;
 
 import com.gamelab.domain.item.Weapon;
 
+import com.gamelab.pattern.decorator.RuneWeaponDecorator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -98,6 +99,20 @@ public final class RuneLoadout {
 
         installedRunes.clear();
         return removedRunes;
+    }
+
+    public Weapon createDecoratedWeapon() {
+        Weapon decoratedWeapon = weapon;
+
+        for (Rune rune : installedRunes) {
+            decoratedWeapon =
+                    new RuneWeaponDecorator(
+                            decoratedWeapon,
+                            rune
+                    );
+        }
+
+        return decoratedWeapon;
     }
 
     public Weapon getWeapon() {
