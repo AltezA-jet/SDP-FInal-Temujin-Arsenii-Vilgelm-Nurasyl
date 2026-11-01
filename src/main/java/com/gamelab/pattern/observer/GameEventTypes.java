@@ -25,6 +25,11 @@ public final class GameEventTypes {
     public static final String POTION_USED =
             "POTION_USED";
 
+    public static final String RUNE_INSTALLED =
+            "RUNE_INSTALLED";
+
+    public static final String RUNE_REMOVED =
+            "RUNE_REMOVED";
 
     private GameEventTypes() {
     }
