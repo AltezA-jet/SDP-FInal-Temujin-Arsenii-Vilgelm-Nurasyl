@@ -10,7 +10,7 @@ import com.gamelab.domain.rune.RuneLoadout;
 import com.gamelab.domain.rune.RuneType;
 import com.gamelab.domain.shop.ShadowfallShopCatalog;
 import com.gamelab.pattern.observer.GameEventBus;
-import com.gamelab.ui.InventoryController;
+import com.gamelab.ui.inventory.InventoryController;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
