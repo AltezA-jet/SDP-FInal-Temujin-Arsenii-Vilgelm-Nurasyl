@@ -115,29 +115,8 @@ public final class CharacterCreationScreen extends Pane {
 
     private void drawWorld() {
         GraphicsContext g=scene.getGraphicsContext2D();
-        g.setFill(Color.web("#090817"));g.fillRect(0,0,W,H);
-        g.setFill(Color.web("#17102c"));g.fillOval(500,100,930,800);
-        // distant cavern arches and broken pillars
-        g.setFill(Color.web("#100d22"));g.fillPolygon(new double[]{0,0,180,230,270,340,410,465,520,0},new double[]{0,800,550,250,550,310,590,390,820,1080},10);
-        g.fillPolygon(new double[]{1920,1920,1740,1690,1640,1580,1510,1450,1400,1920},new double[]{0,790,520,280,560,330,600,420,850,1080},10);
-        for(int i=0;i<4;i++){double x=i<2?35+i*102:1580+(i-2)*112;double y=150+(i%2)*110;double h=440+(i%2)*90;g.setFill(Color.web("#201934"));g.fillRect(x,y,54,h);g.setFill(Color.web("#392a4b"));g.fillRect(x-12,y,78,18);g.fillRect(x-5,y+h-18,66,21);g.setFill(Color.web("#0e0b1b"));g.fillRect(x+9,y+30,7,h-52);}
-        // floor
-        g.setFill(Color.web("#100c1c"));g.fillPolygon(new double[]{0,460,730,1190,1470,1920,1920,0},new double[]{820,700,740,740,700,820,1080,1080},8);
-        for(int i=0;i<48;i++){double x=i*43;double y=814+Math.sin(i*1.7)*13;g.setFill(i%2==0?Color.web("#21172b"):Color.web("#181326"));g.fillRect(x,y,38,10);g.setFill(Color.web("#49354d",.32));g.fillRect(x,y,38,2);}
-        // pedestal: carved stone tiers and inlaid golden edges
-        g.setFill(Color.web("#171525"));g.fillPolygon(new double[]{690,1230,1310,610},new double[]{752,752,819,819},4);
-        g.setFill(Color.web("#342940"));g.fillPolygon(new double[]{610,1310,1278,642},new double[]{819,819,854,854},4);
-        g.setFill(Color.web("#665171"));g.fillPolygon(new double[]{642,1278,1245,675},new double[]{854,854,875,875},4);
-        g.setStroke(Color.web("#bd8b4c",.78));g.setLineWidth(3);g.strokePolygon(new double[]{690,1230,1310,610},new double[]{752,752,819,819},4);g.strokePolygon(new double[]{642,1278,1245,675},new double[]{854,854,875,875},4);
-        g.setFill(Color.web("#151222"));g.fillPolygon(new double[]{785,1135,1190,730},new double[]{575,575,750,750},4);
-        g.setFill(Color.web("#271e36"));g.fillPolygon(new double[]{785,1135,1190,730},new double[]{575,575,633,633},4);
-        g.setStroke(Color.web("#8c67ac",.65));g.setLineWidth(2);g.strokePolygon(new double[]{785,1135,1190,730},new double[]{575,575,750,750},4);
-        // rune marks around the empty sprite socket
-        for(int i=0;i<12;i++){double a=i*Math.PI/6, cx=960+Math.cos(a)*246,cy=660+Math.sin(a)*80;g.save();g.translate(cx,cy);g.rotate(i*30);g.setFill(Color.web("#b18be7",.78));g.fillRect(-3,-13,6,26);g.fillRect(-9,-3,18,5);g.restore();}
-        // candles
-        for(int i=0;i<6;i++){double x=430+i*212,y=777+(i%2)*15;g.setFill(Color.web("#49303c"));g.fillRect(x,y,12,38);g.setFill(Color.web("#ffb764"));g.fillRect(x+4,y-9,4,11);}
-        // vignette
-        g.setFill(Color.rgb(3,3,10,.40));g.fillRect(0,0,W,130);g.fillRect(0,920,W,160);
+        javafx.scene.image.Image background = new javafx.scene.image.Image(CharacterCreationScreen.class.getResource("/assets/character_creation_bg.jpg").toExternalForm());
+        g.drawImage(background, 0, 0, W, H);
     }
 
     private void drawFx(){GraphicsContext g=fx.getGraphicsContext2D();g.clearRect(0,0,W,H);double pulse=.55+.35*Math.sin(time*1.4);g.setFill(Color.rgb(173,112,255,.08*pulse));g.fillOval(690,510,540,315);for(int i=0;i<14;i++){double x=620+(i*137%690), y=220+(i*193%650), a=.18+.35*(.5+.5*Math.sin(time*1.7+i));g.setFill(Color.rgb(188,151,255,a));g.fillRect(Math.floor(x/4)*4,Math.floor(y/4)*4,3,3);}for(int i=0;i<6;i++){double x=430+i*212,y=767+(i%2)*15,r=30+4*Math.sin(time*4+i);g.setFill(Color.rgb(255,153,65,.08));g.fillOval(x-r,y-r,r*2,r*2);} }
@@ -161,7 +140,7 @@ public final class CharacterCreationScreen extends Pane {
     private Label label(String text,int size,String color){Label l=new Label(text);l.setTextFill(Color.web(color));l.setFont(Font.font("Serif",size));return l;}
     private Button button(String text,Runnable action){Button b=new Button(text);b.setStyle(buttonStyle(false));b.setOnAction(e->action.run());b.setOnMouseEntered(e->{if(b!=null)b.setScaleX(1.025);b.setScaleY(1.025);});b.setOnMouseExited(e->{b.setScaleX(1);b.setScaleY(1);});return b;}
     private Button slot(Runnable action){Button b=button("✧",action);b.setStyle(slotStyle(false));b.setTextFill(Color.web("#806b93"));b.setFont(Font.font("Serif",23));return b;}
-    private String buttonStyle(boolean active){return "-fx-background-color:"+(active?"linear-gradient(#392a27,#191321)":"linear-gradient(#211b2c,#100e19)")+";-fx-text-fill:"+(active?"#ffe5a0":"#d6c4a3")+";-fx-font-family:'Serif';-fx-font-size:18px;-fx-font-weight:bold;-fx-border-color:"+(active?"#ffc75b":"#816044")+";-fx-border-width:"+(active?3:2)+";-fx-background-radius:0;-fx-border-radius:0;-fx-effect:"+(active?"dropshadow(gaussian, rgba(255,184,72,0.48), 18, 0.35, 0, 0)":"dropshadow(gaussian, rgba(0,0,0,0.6), 7, 0.2, 0, 2)")+";-fx-cursor:hand;";}
+    private String buttonStyle(boolean active){return "-fx-background-color:transparent;-fx-background-image:url('/assets/button_glow.png'),url('/assets/button_frame.png');-fx-background-size:100% 125%,100% 100%;-fx-background-position:center center;-fx-background-repeat:no-repeat;-fx-text-fill:"+(active?"#ffe5a0":"#e2d3f0")+";-fx-font-family:'Monospaced';-fx-font-size:18px;-fx-font-weight:bold;-fx-border-color:transparent;-fx-background-radius:0;-fx-border-radius:0;-fx-effect:"+(active?"dropshadow(gaussian, rgba(193,104,255,0.60), 18, 0.35, 0, 0)":"dropshadow(gaussian, rgba(0,0,0,0.6), 7, 0.2, 0, 2)")+";-fx-cursor:hand;";}
     private String slotStyle(boolean active){return "-fx-background-color:linear-gradient(#211b2c,#100e19);-fx-text-fill:#c6a6e8;-fx-border-color:"+(active?"#ffd36b":"#806044")+";-fx-border-width:"+(active?3:1.5)+";-fx-background-radius:0;-fx-border-radius:0;-fx-cursor:hand;";}
     private String hex(Color c){return String.format("#%02x%02x%02x",(int)(c.getRed()*255),(int)(c.getGreen()*255),(int)(c.getBlue()*255));}
     public void stop(){animation.stop();}
