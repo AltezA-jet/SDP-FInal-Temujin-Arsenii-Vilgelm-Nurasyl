@@ -217,6 +217,8 @@ public final class MenuButton extends Pane {
         if (textLabel != null) textLabel.setTextFill(value ? Color.web("#ffe5a0") : Color.web("#e2d3f0"));
     }
 
+    public void setText(String text) { if (textLabel != null) textLabel.setText(text); }
+
     public void setEnabled(boolean value) {
         enabled = value;
         if (!value) glow.setOpacity(0);

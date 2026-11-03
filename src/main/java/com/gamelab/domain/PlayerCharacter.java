@@ -9,11 +9,17 @@ public class PlayerCharacter {
     private int health;
     private int maxHealth;
     private int damage;
+    private final int baseDamage;
     private int defense;
 
     private int level;
     private int experience;
     private int statPoints;
+    private int skillPoints;
+    private int healthRank, attackRank, speedRank, resourcesRank;
+    private int healthBonus, attackBonus;
+    private final java.util.Map<String, Integer> skillRanks = new java.util.LinkedHashMap<>();
+    public static final int MAX_LEVEL = 15;
 
     public PlayerCharacter(
             String name,
@@ -39,11 +45,13 @@ public class PlayerCharacter {
         this.maxHealth = maxHealth;
         this.health = maxHealth;
         this.damage = damage;
+        this.baseDamage = damage;
         this.defense = defense;
 
         this.level = 1;
         this.experience = 0;
         this.statPoints = 0;
+        this.skillPoints = 0;
     }
 
     public void takeDamage(int incomingDamage) {
@@ -68,21 +76,62 @@ public class PlayerCharacter {
             throw new IllegalArgumentException("Experience cannot be negative");
         }
 
-        experience += amount;
-
-        while (experience >= level * 100) {
-            experience -= level * 100;
-            level++;
-            statPoints += 2;
-            damage += 2;
-            maxHealthIncrease();
+        while (amount > 0 && level < MAX_LEVEL) {
+            int needed = experienceToNextLevel();
+            int gained = Math.min(amount, needed - experience);
+            experience += gained;
+            amount -= gained;
+            if (experience >= needed) {
+                experience = 0;
+                level++;
+                statPoints += 2;
+                skillPoints++;
+            }
         }
     }
 
-    private void maxHealthIncrease() {
-        maxHealth += 10;
-        health = Math.min(maxHealth, health + 10);
+    public int experienceToNextLevel() { return level >= MAX_LEVEL ? 0 : level * 100; }
+
+    /** Awards stage XP and the separate end-of-stage currencies defined by the GDD. */
+    public void completeStage(com.gamelab.domain.progression.CampaignBalance.Stage stage,
+                              com.gamelab.domain.progression.Difficulty difficulty) {
+        if (stage == null || difficulty == null) throw new IllegalArgumentException("Stage and difficulty are required");
+        gainExperience((int)Math.round(stage.experience() * difficulty.experienceMultiplier()));
+        statPoints += com.gamelab.domain.progression.CampaignBalance.clearStatReward(difficulty);
+        skillPoints += com.gamelab.domain.progression.CampaignBalance.clearSkillReward(difficulty);
     }
+
+    public boolean upgradeStat(String branch) {
+        int rank = switch (branch.toLowerCase(java.util.Locale.ROOT)) {
+            case "health", "здоровье" -> healthRank;
+            case "attack", "сила" -> attackRank;
+            case "speed", "ловкость" -> speedRank;
+            case "resources", "разум" -> resourcesRank;
+            default -> throw new IllegalArgumentException("Unknown stat branch: " + branch);
+        };
+        int cost = rank < 3 ? 1 : rank < 6 ? 2 : rank < 9 ? 3 : 4;
+        if (rank >= 12 || statPoints < cost) return false;
+        statPoints -= cost;
+        switch (branch.toLowerCase(java.util.Locale.ROOT)) {
+            case "health", "здоровье" -> { int amount=healthPerRank(); healthRank++; healthBonus += amount; maxHealth += amount; health = Math.min(maxHealth, health + amount); }
+            case "attack", "сила" -> { attackRank++; attackBonus += attackPercentPerRank(); damage += Math.round(baseDamage * attackPercentPerRank() / 100.0f); }
+            case "speed", "ловкость" -> speedRank++;
+            case "resources", "разум" -> resourcesRank++;
+        }
+        return true;
+    }
+
+    public boolean upgradeSkill(String skillId, int maximumRank, int cost, int requiredLevel) {
+        if (skillId == null || maximumRank < 1 || cost < 0) throw new IllegalArgumentException("Invalid skill upgrade");
+        if (level < requiredLevel || skillPoints < cost) return false;
+        int rank = skillRanks.getOrDefault(skillId, 0);
+        if (rank >= maximumRank) return false;
+        skillPoints -= cost;
+        skillRanks.put(skillId, rank + 1);
+        return true;
+    }
+
+    public int getSkillRank(String skillId) { return skillRanks.getOrDefault(skillId, 0); }
 
     public void increaseDefense(int amount) {
         if (amount < 0) {
@@ -134,6 +183,30 @@ public class PlayerCharacter {
 
     public int getStatPoints() {
         return statPoints;
+    }
+    public int getSkillPoints() { return skillPoints; }
+    public int getHealthRank() { return healthRank; }
+    public int getAttackRank() { return attackRank; }
+    public int getSpeedRank() { return speedRank; }
+    public int getResourcesRank() { return resourcesRank; }
+    public int getAttackBonusPercent() { return attackBonus; }
+    public int getHealthBonus() { return healthBonus; }
+    public double getAttackSpeedBonusPercent() { return speedRank * switch (classIndex()) { case 0->1.5; case 1,2->2.5; default->3.0; }; }
+    public int getCritChanceBonusPercent() { return speedRank * (classIndex()==1||classIndex()==3 ? 2 : 0); }
+    public int getResourceRegenerationBonusPercent() { return resourcesRank * 4; }
+    public int getBonusResourceAmount() { return resourcesRank * switch(classIndex()){case 0->8;case 2->6;default->0;}; }
+    public int getResourceCooldownReductionPercent() { return classIndex()==1 ? resourcesRank*2 : 0; }
+    public int getInvisibilityCostReductionPercent() { return classIndex()==3 ? resourcesRank*1 : 0; }
+
+    private int healthPerRank() { return switch(classIndex()){case 0->15;case 1->10;default->8;}; }
+    private int attackPercentPerRank() { return switch(classIndex()){case 0->8;case 1,3->6;default->3;}; }
+    private int classIndex() {
+        String c=characterClass.toUpperCase(java.util.Locale.ROOT);
+        if(c.contains("WARRIOR")||c.contains("Р’Рѕ"))return 0;
+        if(c.contains("ARCHER")||c.contains("Р›Сѓ"))return 1;
+        if(c.contains("MAGE")||c.contains("РњР°"))return 2;
+        if(c.contains("ASSASSIN")||c.contains("РђСЃ"))return 3;
+        return 0;
     }
 
     public boolean isAlive() {
