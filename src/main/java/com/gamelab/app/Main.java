@@ -13,6 +13,7 @@ import com.gamelab.domain.PlayerCharacter;
 import com.gamelab.ui.character.CharacterCreationScreen;
 import com.gamelab.ui.menu.MenuScreen;
 import com.gamelab.ui.menu.GameMenuScreen;
+import com.gamelab.ui.level.TutorialLevelScreen;
 
 
 /**
@@ -74,7 +75,7 @@ public class Main extends Application {
     }
 
     private void onCharacterCreated(PlayerCharacter player) {
-        showFixedScreen(new GameMenuScreen(player, this::returnToMenu));
+        showFixedScreen(new TutorialLevelScreen(player, () -> showFixedScreen(new GameMenuScreen(player, this::returnToMenu))));
     }
 
     private void returnToMenu() {

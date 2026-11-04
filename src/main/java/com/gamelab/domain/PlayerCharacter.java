@@ -17,6 +17,9 @@ public class PlayerCharacter {
     private int statPoints;
     private int skillPoints;
     private int healthRank, attackRank, speedRank, resourcesRank;
+    private int hairColorIndex;
+    private int outfitIndex;
+    private int headwearIndex = -1;
     private int healthBonus, attackBonus;
     private final java.util.Map<String, Integer> skillRanks = new java.util.LinkedHashMap<>();
     public static final int MAX_LEVEL = 15;
@@ -189,6 +192,14 @@ public class PlayerCharacter {
     public int getAttackRank() { return attackRank; }
     public int getSpeedRank() { return speedRank; }
     public int getResourcesRank() { return resourcesRank; }
+    public void setAppearance(int hairColorIndex, int outfitIndex, int headwearIndex) {
+        this.hairColorIndex = hairColorIndex;
+        this.outfitIndex = outfitIndex;
+        this.headwearIndex = headwearIndex;
+    }
+    public int getHairColorIndex() { return hairColorIndex; }
+    public int getOutfitIndex() { return outfitIndex; }
+    public int getHeadwearIndex() { return headwearIndex; }
     public int getAttackBonusPercent() { return attackBonus; }
     public int getHealthBonus() { return healthBonus; }
     public double getAttackSpeedBonusPercent() { return speedRank * switch (classIndex()) { case 0->1.5; case 1,2->2.5; default->3.0; }; }
