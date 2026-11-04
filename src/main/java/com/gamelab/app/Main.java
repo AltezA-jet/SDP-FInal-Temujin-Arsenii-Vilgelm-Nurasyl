@@ -28,6 +28,7 @@ public class Main extends Application {
     private static final String TITLE = "Game Lab: Shadowfall";
     private Stage stage;
     private MenuScreen menu;
+    private GameScreen gameScreen;
 
     public static void main(String[] args) {
         launch(args);
@@ -56,6 +57,7 @@ public class Main extends Application {
                 e.consume();
             } else {
                 if (menu != null && menu.getScene() == stage.getScene()) menu.handleKey(e.getCode());
+                if (gameScreen != null && gameScreen.getScene() == stage.getScene() && e.getCode() == KeyCode.I) gameScreen.toggleInventory();
             }
         });
 
@@ -78,7 +80,8 @@ public class Main extends Application {
 
     private void onCharacterCreated(PlayerCharacter player) {
         System.out.println("[Shadowfall] Character created: " + player.getName() + " (" + player.getCharacterClass() + ")");
-        showFixedScreen(new GameScreen(player, this::returnToMenu));
+        gameScreen = new GameScreen(player, this::returnToMenu);
+        showFixedScreen(gameScreen);
     }
 
     private void returnToMenu() {
