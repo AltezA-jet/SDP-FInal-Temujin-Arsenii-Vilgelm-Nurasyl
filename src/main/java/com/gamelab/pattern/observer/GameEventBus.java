@@ -8,4 +8,5 @@ public final class GameEventBus {
     public void subscribe(GameObserver observer) { if (observer != null) observers.addIfAbsent(observer); }
     public void unsubscribe(GameObserver observer) { observers.remove(observer); }
     public void publish(String type, String message) { GameEvent event = new GameEvent(type, message); observers.forEach(o -> o.onGameEvent(event)); }
+    public void publish(String type, String message, Object payload) { GameEvent event = new GameEvent(type, message, payload); observers.forEach(o -> o.onGameEvent(event)); }
 }
