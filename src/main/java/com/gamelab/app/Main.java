@@ -15,6 +15,7 @@ import javafx.stage.Stage;
 import com.gamelab.domain.PlayerCharacter;
 import com.gamelab.ui.character.CharacterCreationScreen;
 import com.gamelab.ui.menu.MenuScreen;
+import com.gamelab.ui.game.GameScreen;
 
 
 /**
@@ -77,6 +78,7 @@ public class Main extends Application {
 
     private void onCharacterCreated(PlayerCharacter player) {
         System.out.println("[Shadowfall] Character created: " + player.getName() + " (" + player.getCharacterClass() + ")");
+        showFixedScreen(new GameScreen(player, this::returnToMenu));
     }
 
     private void returnToMenu() {
