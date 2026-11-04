@@ -14,6 +14,7 @@ import com.gamelab.ui.character.CharacterCreationScreen;
 import com.gamelab.ui.menu.MenuScreen;
 import com.gamelab.ui.menu.GameMenuScreen;
 import com.gamelab.ui.level.TutorialLevelScreen;
+import com.gamelab.ui.inventory.InventoryScreen;
 
 
 /**
@@ -75,7 +76,10 @@ public class Main extends Application {
     }
 
     private void onCharacterCreated(PlayerCharacter player) {
-        showFixedScreen(new TutorialLevelScreen(player, () -> showFixedScreen(new GameMenuScreen(player, this::returnToMenu))));
+        final GameMenuScreen[] gameMenu = new GameMenuScreen[1];
+        gameMenu[0] = new GameMenuScreen(player, this::returnToMenu,
+                inventory -> showFixedScreen(new InventoryScreen(inventory, () -> showFixedScreen(gameMenu[0]))));
+        showFixedScreen(new TutorialLevelScreen(player, () -> showFixedScreen(gameMenu[0])));
     }
 
     private void returnToMenu() {

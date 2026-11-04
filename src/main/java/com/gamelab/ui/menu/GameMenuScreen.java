@@ -1,8 +1,10 @@
 package com.gamelab.ui.menu;
 
 import com.gamelab.domain.PlayerCharacter;
+import com.gamelab.domain.inventory.Inventory;
 import com.gamelab.domain.progression.Difficulty;
 import com.gamelab.ui.components.MenuButton;
+import java.util.function.Consumer;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
@@ -31,6 +33,8 @@ public final class GameMenuScreen extends Pane {
     private static final String[] TABS={"CHARACTER","SKILL TREE","INVENTORY","STATS","SETTINGS"};
     private final PlayerCharacter player;
     private final Runnable back;
+    private final Inventory inventory = new Inventory(16);
+    private final Consumer<Inventory> openInventory;
     private final List<MenuButton> buttons=new ArrayList<>();
     private final List<Label> dynamic=new ArrayList<>();
     private final MenuButton[] skillNodes=new MenuButton[5];
@@ -39,9 +43,13 @@ public final class GameMenuScreen extends Pane {
     private Label detailTitle,detailBody,points,feedback;
 
     public GameMenuScreen(PlayerCharacter player,Runnable back){
-        this.player=player;this.back=back;
+        this(player, back, inventory -> { });
+    }
+    public GameMenuScreen(PlayerCharacter player,Runnable back,Consumer<Inventory> openInventory){
+        this.player=player;this.back=back;this.openInventory=openInventory;
         setPrefSize(W,H);setMinSize(W,H);setMaxSize(W,H);
-        drawBackground();drawHeader();drawPanels();drawTree();drawFooter();refresh();
+        drawBackground();drawHeader();drawPanels();drawTree();drawFooter();
+        refresh();
     }
     private void drawBackground(){
         Image image=new Image(GameMenuScreen.class.getResource("/assets/references/moonlit_castle_background.jpg").toExternalForm());
@@ -52,7 +60,16 @@ public final class GameMenuScreen extends Pane {
     }
     private void drawHeader(){
         MenuButton backButton=button("←  BACK",34,24,190,58);backButton.setOnAction(back);buttons.add(backButton);
-        for(int i=0;i<TABS.length;i++){final int tab=i;MenuButton b=button(TABS[i],420+i*190,28,175,54);b.setOnAction(()->{selectedTab=tab;refresh();});buttons.add(b);}
+        for(int i=0;i<TABS.length;i++){
+            final int tab=i;
+            MenuButton b=button(TABS[i],420+i*190,28,175,54);
+            b.setOnAction(()->{
+                selectedTab=tab;
+                if(tab==2) openInventory();
+                refresh();
+            });
+            buttons.add(b);
+        }
         Label currency=label("◆  0",30,1530,32,190,48,"#ffd66e");getChildren().add(currency);
     }
     private void drawPanels(){
@@ -93,7 +110,10 @@ public final class GameMenuScreen extends Pane {
     private void drawFooter(){
         MenuButton[] classes=new MenuButton[4];for(int i=0;i<4;i++){final int index=i;classes[i]=button(CLASSES[i],574+i*195,922,185,64);classes[i].setOnAction(()->{selectedClass=index;selectedSkill=0;refresh();});buttons.add(classes[i]);}
         labelAt("LMB  Select / Upgrade",46,1022,17,"#cdbac7");labelAt("ESC  Back",1645,1022,17,"#cdbac7");
-        setOnKeyPressed(e->{if(e.getCode()==javafx.scene.input.KeyCode.ESCAPE)back.run();});setFocusTraversable(true);
+        setOnKeyPressed(e->{
+            if(e.getCode()==javafx.scene.input.KeyCode.ESCAPE) back.run();
+            if(e.getCode()==javafx.scene.input.KeyCode.I) openInventory();
+        });setFocusTraversable(true);
     }
     private void upgradeSelected(){
         int rank=player.getSkillRank(skillId(selectedSkill));int cost=COSTS[selectedSkill][Math.min(rank,2)];
@@ -120,4 +140,6 @@ public final class GameMenuScreen extends Pane {
     private void line(double x1,double y1,double x2,double y2,String color,double width){Line l=new Line(x1,y1,x2,y2);l.setStroke(Color.web(color));l.setStrokeWidth(width);getChildren().add(l);}
     private Label label(String text,double x,double y,double size,double w,double h,String color){Label l=new Label(text);l.relocate(x,y);l.setPrefSize(w,h);l.setTextFill(Color.web(color));l.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: "+size+"px; -fx-font-weight: bold;");l.setAlignment(Pos.CENTER_LEFT);return l;}
     private void labelAt(String text,double x,double y,double size,String color){Label l=label(text,x,y,size,390,40,color);getChildren().add(l);}
+    public Inventory getInventory(){return inventory;}
+    public void openInventory(){openInventory.accept(inventory);}
 }
