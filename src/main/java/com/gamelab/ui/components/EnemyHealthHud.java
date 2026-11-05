@@ -13,9 +13,7 @@ public final class EnemyHealthHud extends Canvas {
     public EnemyHealthHud(String enemyId, int current, int maximum) {
         super(110, 18);
         if (enemyId == null || enemyId.isBlank()) throw new IllegalArgumentException("enemyId required");
-        this.enemyId = enemyId;
-        setMouseTransparent(true);
-        setHealth(current, maximum);
+        this.enemyId = enemyId; setMouseTransparent(true); setHealth(current, maximum);
     }
     public String getEnemyId() { return enemyId; }
     public int getCurrentHealth() { return current; }
@@ -27,8 +25,7 @@ public final class EnemyHealthHud extends Canvas {
         g.setFill(Color.rgb(12, 9, 14, .9)); g.fillRoundRect(1, 1, 108, 16, 4, 4);
         g.setFill(Color.rgb(65, 17, 25)); g.fillRect(5, 5, 100, 8);
         g.setFill(Color.rgb(178, 30, 39)); g.fillRect(5, 5, 100.0 * current / maximum, 8);
-        g.setStroke(Color.rgb(151, 111, 78)); g.setLineWidth(1); g.strokeRect(1.5, 1.5, 107, 15);
-        g.setFill(Color.rgb(250, 220, 190)); g.setFont(Font.font("Serif", 9));
-        g.fillText(current + "/" + maximum, 76, 13);
+        g.setStroke(Color.rgb(151, 111, 78)); g.strokeRect(1.5, 1.5, 107, 15);
+        g.setFill(Color.rgb(250, 220, 190)); g.setFont(Font.font("Serif", 9)); g.fillText(current + "/" + maximum, 76, 13);
     }
 }

@@ -2,12 +2,9 @@ package com.gamelab.app;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Screen;
@@ -15,7 +12,9 @@ import javafx.stage.Stage;
 import com.gamelab.domain.PlayerCharacter;
 import com.gamelab.ui.character.CharacterCreationScreen;
 import com.gamelab.ui.menu.MenuScreen;
-import com.gamelab.ui.game.GameScreen;
+import com.gamelab.ui.menu.GameMenuScreen;
+import com.gamelab.ui.level.TutorialLevelScreen;
+import com.gamelab.ui.inventory.InventoryScreen;
 
 
 /**
@@ -50,7 +49,7 @@ public class Main extends Application {
         // 1:1 (1920x1080) when the screen is big enough, otherwise the largest 16:9 window that fits
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
         double s = Math.min(1.0, Math.min(screen.getWidth() / MenuScreen.W, (screen.getHeight() - 40) / MenuScreen.H));
-        Scene scene = new Scene(new StackPane(), MenuScreen.W * s, MenuScreen.H * s, Color.BLACK);
+        Scene scene = new Scene(new Pane(), MenuScreen.W * s, MenuScreen.H * s, Color.BLACK);
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.F11) {
                 stage.setFullScreen(!stage.isFullScreen());
@@ -79,9 +78,10 @@ public class Main extends Application {
     }
 
     private void onCharacterCreated(PlayerCharacter player) {
-        System.out.println("[Shadowfall] Character created: " + player.getName() + " (" + player.getCharacterClass() + ")");
-        gameScreen = new GameScreen(player, this::returnToMenu);
-        showFixedScreen(gameScreen);
+        final GameMenuScreen[] gameMenu = new GameMenuScreen[1];
+        gameMenu[0] = new GameMenuScreen(player, this::returnToMenu,
+                inventory -> showFixedScreen(new InventoryScreen(inventory, () -> showFixedScreen(gameMenu[0]))));
+        showFixedScreen(new TutorialLevelScreen(player, () -> showFixedScreen(gameMenu[0])));
     }
 
     private void returnToMenu() {
@@ -95,12 +95,20 @@ public class Main extends Application {
     }
 
     private void showFixedScreen(Pane screen) {
-        StackPane root = new StackPane(new Group(screen));
+        Pane root = new Pane();
         root.setStyle("-fx-background-color:black;");
-        screen.scaleXProperty().bind(Bindings.createDoubleBinding(
-                () -> Math.max(0.01, Math.min(root.getWidth() / MenuScreen.W, root.getHeight() / MenuScreen.H)),
-                root.widthProperty(), root.heightProperty()));
-        screen.scaleYProperty().bind(screen.scaleXProperty());
+        screen.setManaged(false);
+        root.getChildren().add(screen);
+        Runnable resize = () -> {
+            double scale = Math.max(0.01, Math.min(root.getWidth() / MenuScreen.W, root.getHeight() / MenuScreen.H));
+            screen.setScaleX(scale);
+            screen.setScaleY(scale);
+            screen.relocate((root.getWidth() - MenuScreen.W * scale) / 2,
+                    (root.getHeight() - MenuScreen.H * scale) / 2);
+        };
+        root.widthProperty().addListener((obs, oldValue, newValue) -> resize.run());
+        root.heightProperty().addListener((obs, oldValue, newValue) -> resize.run());
+        resize.run();
         stage.getScene().setRoot(root);
     }
 
