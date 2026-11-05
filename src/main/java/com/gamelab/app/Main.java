@@ -1,5 +1,6 @@
 package com.gamelab.app;
 
+import com.gamelab.ui.game.GameScreen;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
@@ -15,6 +16,7 @@ import com.gamelab.ui.menu.MenuScreen;
 import com.gamelab.ui.menu.GameMenuScreen;
 import com.gamelab.ui.level.TutorialLevelScreen;
 import com.gamelab.ui.inventory.InventoryScreen;
+import com.gamelab.ui.shop.ShopScreen;
 
 
 /**
@@ -81,6 +83,14 @@ public class Main extends Application {
         final GameMenuScreen[] gameMenu = new GameMenuScreen[1];
         gameMenu[0] = new GameMenuScreen(player, this::returnToMenu,
                 inventory -> showFixedScreen(new InventoryScreen(inventory, () -> showFixedScreen(gameMenu[0]))));
+        gameMenu[0].setOnShop(inventory -> showFixedScreen(new ShopScreen(
+                inventory,
+                gameMenu[0].getWallet(),
+                player.getCharacterClass(),
+                () -> {
+                    gameMenu[0].refreshWallet();
+                    showFixedScreen(gameMenu[0]);
+                })));
         showFixedScreen(new TutorialLevelScreen(player, () -> showFixedScreen(gameMenu[0])));
     }
 
