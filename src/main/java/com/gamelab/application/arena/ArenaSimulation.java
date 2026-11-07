@@ -27,6 +27,8 @@ public final class ArenaSimulation {
         public double hurtTime, hurtElapsed;
         private int observedHealth;
         private Platform jumpTarget;
+        private FiringPositionPlanner.Position firingPosition;
+        private double firingSearchCooldown;
         public int attacks;
         public String animation = "idle", action = "";
         private Attack pending;
@@ -149,7 +151,8 @@ public final class ArenaSimulation {
         if (fighter.profile.boss()) { fighter.enemy.setBehavior(new MeleeBehavior()); return; }
         boolean ranged = mode == BehaviorMode.RANGED || mode == BehaviorMode.AUTO && fighter.profile.ranged();
         EnemyBehavior normal = ranged ? new RangedBehavior(fighter.profile.range() * .72) : new MeleeBehavior();
-        fighter.enemy.setBehavior(new WoundedRetreatBehavior(normal, Math.max(330, fighter.profile.range() * .8)));
+        EnemyBehavior approach=fighter.profile.ranged() ? new RangedBehavior(Math.min(260,fighter.profile.range()*.45)) : new MeleeBehavior();
+        fighter.enemy.setBehavior(new WoundedRetreatBehavior(normal, Math.max(330, fighter.profile.range() * .8),approach));
     }
 
     public void jump() { if (player.isAlive()) physics.jump(hero); }
@@ -239,19 +242,44 @@ public final class ArenaSimulation {
         }
         double dx=hero.x-fighter.body.x;
         double targetX=hero.x;
+        double targetY=hero.y;
+        boolean clearShot=canShoot(fighter);
+        boolean seekingShot=fighter.profile.ranged() && !fighter.profile.boss() && mode!=BehaviorMode.MELEE
+                && !fighter.retreating() && !clearShot;
+        fighter.firingSearchCooldown-=dt;
+        if (seekingShot) {
+            if (fighter.firingSearchCooldown<=0 || fighter.firingPosition==null) {
+                fighter.firingPosition=FiringPositionPlanner.find(fighter.body,hero.x,hero.y,fighter.profile.range(),PLATFORMS);
+                fighter.firingSearchCooldown=.5;
+            }
+            if (fighter.firingPosition!=null) {
+                targetX=fighter.firingPosition.x(); targetY=fighter.firingPosition.y();
+            }
+        } else fighter.firingPosition=null;
+        boolean needsClimb=!fighter.profile.ranged() || mode==BehaviorMode.MELEE || seekingShot;
         // Keep the selected landing surface throughout flight. Replanning mid-jump can
         // reverse horizontal steering or cancel it as soon as the enemy rises above the target.
         if (fighter.body.grounded) fighter.jumpTarget=null;
         Platform steppingStone = fighter.jumpTarget;
         if (steppingStone==null && fighter.body.grounded && !fighter.profile.boss()
-                && hero.y < fighter.body.y-65 && !fighter.retreating()) {
-            steppingStone=physics.nextPlatform(fighter.body,hero.x,hero.y,PLATFORMS,fighter.walkingSpeed());
+                && targetY < fighter.body.y-65 && !fighter.retreating() && needsClimb) {
+            steppingStone=physics.nextPlatform(fighter.body,targetX,targetY,PLATFORMS,fighter.walkingSpeed());
         }
         if (steppingStone!=null) targetX=steppingStone.x()+steppingStone.width()/2;
+        boolean dropping=seekingShot && steppingStone==null && fighter.body.grounded && targetY>fighter.body.y+50;
+        if (dropping) for (Platform surface : PLATFORMS) {
+            if (Math.abs(surface.y()-fighter.body.y)<1 && surface.supports(fighter.body.x,30)) {
+                targetX=Math.abs(targetX-surface.x())<Math.abs(targetX-(surface.x()+surface.width()))
+                        ? surface.x()-50 : surface.x()+surface.width()+50;
+                break;
+            }
+        }
         double beforeX=fighter.body.x;
         // Strategies choose horizontal intent. Gravity alone controls vertical movement.
-        fighter.enemy.update(targetX, fighter.body.y, dt*3);
-        double vx=(fighter.enemy.getX()-beforeX)/dt;
+        fighter.enemy.update(targetX, fighter.body.y, dt);
+        double vx=(fighter.enemy.getX()-beforeX)/dt*3;
+        if (seekingShot && steppingStone==null)
+            vx=Math.signum(targetX-beforeX)*Math.min(fighter.walkingSpeed(),Math.abs(targetX-beforeX)/dt);
         boolean meleeStop = !fighter.retreating() && !fighter.profile.ranged() && Math.abs(dx)<80;
         if (meleeStop && steppingStone==null) vx=0;
         if (steppingStone!=null) {
@@ -271,7 +299,7 @@ public final class ArenaSimulation {
         }
         // Once sharing a platform, distance-keeping must not walk off its edge and
         // immediately start the same climb again. Keep room to retreat on the surface.
-        if (steppingStone==null && fighter.body.grounded && Math.abs(hero.y-fighter.body.y)<50) {
+        if (steppingStone==null && !dropping && fighter.body.grounded && Math.abs(hero.y-fighter.body.y)<50) {
             for (Platform surface : PLATFORMS) {
                 if (Math.abs(surface.y()-fighter.body.y)<1 && surface.supports(fighter.body.x,0)
                         && surface.supports(hero.x,0)) {
@@ -284,10 +312,12 @@ public final class ArenaSimulation {
         physics.step(fighter.body,vx,30,dt,fighter.profile.boss() ? List.of() : PLATFORMS);
         fighter.enemy.setPosition(fighter.body.x,fighter.body.y);
         fighter.animation=Math.abs(vx)>1 ? "walk" : "idle";
-        fighter.action=fighter.retreating() ? "Отступает: HP < 30%" : mode == BehaviorMode.AUTO
+        boolean approaching=fighter.enemy.getBehavior() instanceof WoundedRetreatBehavior wounded && wounded.isApproaching(fighter.enemy);
+        fighter.action=fighter.retreating() ? "Отступает" : seekingShot ? "Ищет линию огня" : approaching ? "Подходит для атаки" : mode == BehaviorMode.AUTO
                 ? (fighter.profile.ranged() ? "Держит дистанцию" : "Сближается") : "Режим: " + mode;
         fighter.cooldown-=dt;
         if (fighter.cooldown>0) return;
+        if (fighter.retreating()) return;
         // An attack windup stops horizontal movement; never interrupt a platform jump with it.
         if (!fighter.body.grounded && !fighter.profile.boss()) return;
         Attack kind=fighter.profile.attack();
@@ -302,7 +332,7 @@ public final class ArenaSimulation {
             else if (Math.abs(dx)<=fighter.profile.range()) beginAttack(fighter,kind,.8,
                     kind==Attack.ROLL ? "Голем сворачивается" : kind==Attack.CHARGE ? "Готовит рывок" : "Готовит снаряд");
         } else if (fighter.profile.ranged()) {
-            if (Math.hypot(dx,hero.y-fighter.body.y)<=fighter.profile.range()) beginAttack(fighter,kind,.5,"Дальний выстрел");
+            if (canShoot(fighter)) beginAttack(fighter,kind,.5,"Дальний выстрел");
         } else if (close) beginAttack(fighter,Attack.MELEE,.4,"Замах");
     }
 
@@ -314,6 +344,11 @@ public final class ArenaSimulation {
 
     private void releaseAttack(Fighter fighter) {
         Attack kind=fighter.pending;
+        if (!fighter.profile.boss() && fighter.profile.ranged() && !canShoot(fighter)) {
+            fighter.cooldown=.15; fighter.animation="idle"; fighter.action="Выстрел перекрыт";
+            fighter.firingSearchCooldown=0;
+            return;
+        }
         int damage=fighter.enemy.getDamage();
         switch (kind) {
             case MELEE -> {
@@ -333,6 +368,7 @@ public final class ArenaSimulation {
             default -> shoot(fighter,kind,0,kind==Attack.STONE ? 18 : 12,damage);
         }
         fighter.attacks++;
+        if (fighter.enemy.getBehavior() instanceof WoundedRetreatBehavior wounded) wounded.attackCompleted(fighter.enemy);
         fighter.cooldown=fighter.profile.boss() ? 2.5 : fighter.profile.ranged() ? 1.65 : .9;
         fighter.animation="idle";
     }
@@ -342,6 +378,11 @@ public final class ArenaSimulation {
         double angle=Math.atan2(hero.y-48-y,hero.x-fighter.body.x)+offset;
         projectiles.add(new Projectile(fighter.body.x,y,Math.cos(angle)*390,Math.sin(angle)*390,radius,damage,
                 fighter.profile.boss(),kind,fighter.profile.id()));
+    }
+
+    public boolean canShoot(Fighter fighter) {
+        return fighter.profile.boss() || FiringPositionPlanner.canShoot(fighter.body.x,fighter.body.y,
+                hero.x,hero.y,fighter.profile.range(),PLATFORMS);
     }
 
     private void summonSlimes(Fighter fighter) {
@@ -370,13 +411,7 @@ public final class ArenaSimulation {
             double heroHeight=crouching ? 38 : 90;
             boolean hit=shot.x+shot.radius>hero.x-24 && shot.x-shot.radius<hero.x+24
                     && shot.y+shot.radius>hero.y-heroHeight && shot.y-shot.radius<hero.y;
-            boolean terrain=false;
-            if (!shot.throughPlatforms) for (Platform platform : PLATFORMS) {
-                double dy=shot.y-oldY;
-                if (dy==0) continue;
-                double t=(platform.y()-oldY)/dy;
-                if (t>=0 && t<=1 && platform.supports(oldX+(shot.x-oldX)*t,shot.radius)) { terrain=true; break; }
-            }
+            boolean terrain=!shot.throughPlatforms && FiringPositionPlanner.blocked(oldX,oldY,shot.x,shot.y,shot.radius,PLATFORMS);
             boolean expired=shot.life<=0 || shot.x<-60 || shot.x>1980 || shot.y<180 || shot.y>FLOOR;
             if (hit || terrain || expired) {
                 if (hit && !dodging()) {

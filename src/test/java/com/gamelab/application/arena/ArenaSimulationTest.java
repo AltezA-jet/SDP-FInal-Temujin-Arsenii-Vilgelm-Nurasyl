@@ -209,12 +209,14 @@ class ArenaSimulationTest {
             arena.hero().y=target.y(); arena.hero().grounded=true;
             advance(arena,60);
             for (ArenaSimulation.Fighter fighter : arena.fighters()) {
-                assertEquals(target.y(),fighter.body.y,1,"Enemy must settle on target platform: "+target+" / "+fighter.profile.id());
+                if (!fighter.profile.ranged() || !arena.canShoot(fighter))
+                    assertEquals(target.y(),fighter.body.y,1,"Enemy must settle on target platform: "+target+" / "+fighter.profile.id());
                 assertTrue(fighter.body.grounded);
             }
             advance(arena,5);
             for (ArenaSimulation.Fighter fighter : arena.fighters()) {
-                assertEquals(target.y(),fighter.body.y,1,"Distance-keeping must not restart the climb");
+                if (!fighter.profile.ranged() || !arena.canShoot(fighter))
+                    assertEquals(target.y(),fighter.body.y,1,"Distance-keeping must not restart the climb");
                 assertTrue(fighter.body.grounded);
             }
         }
@@ -259,7 +261,72 @@ class ArenaSimulationTest {
             }
             assertTrue(jumped,"Enemies should still be able to jump at stage "+stage);
             for (ArenaSimulation.Fighter fighter : arena.fighters())
-                assertEquals(target.y(),fighter.body.y,1,"Enemy must reach the platform without a speed boost: "+fighter.profile.id()+" x="+fighter.body.x+" vy="+fighter.body.velocityY);
+                if (!fighter.profile.ranged() || !arena.canShoot(fighter))
+                    assertEquals(target.y(),fighter.body.y,1,"Enemy must reach the platform without a speed boost: "+fighter.profile.id());
         }
+    }
+    @Test void blockedArcherFindsAFiringPosition() {
+        ArenaSimulation arena=arena(); arena.start(1,false);
+        var archer=arena.fighters().get(0);
+        archer.body.x=350; archer.enemy.setPosition(350,FLOOR);
+        arena.hero().x=350; arena.hero().y=755; arena.hero().grounded=true;
+        assertFalse(arena.canShoot(archer));
+        for (int i=0;i<1500;i++) {
+            int attacks=archer.attacks; boolean clear=arena.canShoot(archer);
+            arena.update(.02,0,false);
+            if (archer.attacks>attacks) assertTrue(clear && arena.canShoot(archer));
+        }
+        assertTrue(archer.attacks>0);
+    }
+
+    @Test void coverDuringWindupCancelsShot() {
+        ArenaSimulation arena=arena(); arena.start(1,false); arena.hero().x=1000;
+        var archer=arena.fighters().get(0);
+        for (int i=0;i<100 && archer.windup==0;i++) arena.update(.02,0,false);
+        assertTrue(archer.windup>0);
+        arena.hero().x=archer.body.x; arena.hero().y=755; arena.hero().grounded=true;
+        assertFalse(arena.canShoot(archer)); advance(arena,.52);
+        assertEquals(0,archer.attacks);
+        assertTrue(arena.projectiles().stream().noneMatch(p -> p.source.equals("archer")));
+    }
+
+    @Test void woundedMeleeRepeatsRetreatAndAttack() {
+        ArenaSimulation arena=arena(); arena.start(1,false); arena.hero().x=1400;
+        var soldier=arena.fighters().get(1); arena.woundEnemies();
+        advance(arena,1.8); assertTrue(soldier.retreating()); assertEquals(0,soldier.attacks);
+        boolean retreatedAfterAttack=false;
+        for (int i=0;i<2500;i++) {
+            arena.update(.02,0,false);
+            retreatedAfterAttack|=soldier.attacks>0 && soldier.retreating();
+        }
+        assertTrue(retreatedAfterAttack); assertTrue(soldier.attacks>=2);
+    }
+
+    @Test void woundedRangedReturnsToAttack() {
+        ArenaSimulation arena=arena(); arena.start(2,false); arena.hero().x=1500;
+        var elemental=arena.fighters().get(1); arena.woundEnemies();
+        advance(arena,1.8); assertEquals(0,elemental.attacks);
+        advance(arena,35); assertTrue(elemental.attacks>=2);
+    }
+
+    @Test void firingGeometryMatchesPlatformObstacles() {
+        assertTrue(FiringPositionPlanner.blocked(350,845,350,707,12,ArenaSimulation.PLATFORMS));
+        assertFalse(FiringPositionPlanner.blocked(350,845,1000,852,12,ArenaSimulation.PLATFORMS));
+        assertTrue(FiringPositionPlanner.blocked(300,755,600,755,12,ArenaSimulation.PLATFORMS));
+        assertFalse(FiringPositionPlanner.canShoot(100,FLOOR,1800,FLOOR,580,ArenaSimulation.PLATFORMS));
+    }
+
+    @Test void retreatDurationIsRandomAndWithinTwoToSevenSeconds() {
+        Enemy enemy=EnemyFactory.create(EnemyType.RUIN_SOLDIER,"wounded",100,0);
+        enemy.takeDamage(enemy.getMaxHealth()-1);
+        var behavior=new WoundedRetreatBehavior(new MeleeBehavior(),330,new MeleeBehavior(),new java.util.Random(42));
+        java.util.Set<Integer> durations=new java.util.HashSet<>();
+        for (int cycle=0;cycle<10;cycle++) {
+            int ticks=0;
+            while (!behavior.isApproaching(enemy) && ticks<710) { behavior.update(enemy,0,0,.01); ticks++; }
+            assertTrue(ticks>=200 && ticks<=701); assertTrue(behavior.isApproaching(enemy));
+            durations.add(ticks); behavior.attackCompleted(enemy); assertTrue(behavior.isRetreating(enemy));
+        }
+        assertTrue(durations.size()>1);
     }
 }
