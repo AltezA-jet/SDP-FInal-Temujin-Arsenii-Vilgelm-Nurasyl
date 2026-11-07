@@ -38,7 +38,12 @@ public final class PlatformPhysics {
     }
 
     /** Finds a route through reachable surfaces instead of repeatedly selecting the nearest ledge. */
-    public Platform nextPlatform(Body body, double targetX, double targetY, List<Platform> platforms) {
+    public static double jumpFlightTime(double fromY, double toY) {
+        double discriminant=JUMP_SPEED*JUMP_SPEED-2*GRAVITY*(fromY-toY);
+        return discriminant<0 ? 0 : (JUMP_SPEED+Math.sqrt(discriminant))/GRAVITY;
+    }
+
+    public Platform nextPlatform(Body body, double targetX, double targetY, List<Platform> platforms, double walkingSpeed) {
         int count=platforms.size(), floor=count, start=floor, goal=-1;
         for (int i=0;i<count;i++) {
             Platform surface=platforms.get(i);
@@ -70,8 +75,8 @@ public final class PlatformPhysics {
                         Platform origin=platforms.get(from);
                         double gap=Math.max(destination.x()-(origin.x()+origin.width()),
                                 origin.x()-(destination.x()+destination.width()));
-                        double flight=(JUMP_SPEED+Math.sqrt(discriminant))/GRAVITY;
-                        if (gap>280*flight-15) continue;
+                        double flight=jumpFlightTime(fromY,destination.y());
+                        if (gap>walkingSpeed*flight-15) continue;
                     }
                     double fromX=from==floor ? body.x : platforms.get(from).x()+platforms.get(from).width()/2;
                     distance=Math.abs(destination.x()+destination.width()/2-fromX)+180;

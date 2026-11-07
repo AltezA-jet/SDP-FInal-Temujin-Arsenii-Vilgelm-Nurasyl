@@ -239,4 +239,27 @@ class ArenaSimulationTest {
         assertEquals(.36,elemental.hurtTime,.001);
         assertEquals(0,elemental.hurtElapsed,.001);
     }
+
+    @Test void approachingAndJumpingNeverExceedNormalWalkingSpeed() {
+        for (int stage=1;stage<=5;stage++) {
+            ArenaSimulation arena=arena(); arena.start(stage,false);
+            Platform target=ArenaSimulation.PLATFORMS.get(1);
+            arena.hero().x=target.x()+target.width()/2;
+            arena.hero().y=target.y(); arena.hero().grounded=true;
+            boolean jumped=false;
+            for (int tick=0;tick<3000;tick++) {
+                double[] before=arena.fighters().stream().mapToDouble(f -> f.body.x).toArray();
+                arena.update(.02,0,false);
+                for (int i=0;i<before.length;i++) {
+                    ArenaSimulation.Fighter fighter=arena.fighters().get(i);
+                    assertTrue(Math.abs(fighter.body.x-before[i])<=fighter.walkingSpeed()*.02+.001,
+                            "Approach/jump accelerated "+fighter.profile.id());
+                    jumped|=fighter.body.velocityY<0;
+                }
+            }
+            assertTrue(jumped,"Enemies should still be able to jump at stage "+stage);
+            for (ArenaSimulation.Fighter fighter : arena.fighters())
+                assertEquals(target.y(),fighter.body.y,1,"Enemy must reach the platform without a speed boost: "+fighter.profile.id()+" x="+fighter.body.x+" vy="+fighter.body.velocityY);
+        }
+    }
 }

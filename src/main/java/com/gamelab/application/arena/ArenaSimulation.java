@@ -15,8 +15,8 @@ import static com.gamelab.application.arena.PlatformPhysics.*;
 public final class ArenaSimulation {
     public enum BehaviorMode { AUTO, MELEE, RANGED }
     public static final List<Platform> PLATFORMS = List.of(
-            new Platform(210, 755, 310), new Platform(660, 615, 300),
-            new Platform(1120, 755, 300), new Platform(1490, 615, 300));
+            new Platform(210, 755, 310), new Platform(560, 615, 400),
+            new Platform(1120, 755, 300), new Platform(1460, 615, 330));
 
     public static final class Fighter {
         public final ArenaCatalog.Profile profile;
@@ -39,6 +39,7 @@ public final class ArenaSimulation {
         public boolean retreating() {
             return enemy.getBehavior() instanceof WoundedRetreatBehavior behavior && behavior.isRetreating(enemy);
         }
+        public double walkingSpeed() { return enemy.getMovementSpeed()*3; }
     }
 
     public static final class Projectile {
@@ -244,7 +245,7 @@ public final class ArenaSimulation {
         Platform steppingStone = fighter.jumpTarget;
         if (steppingStone==null && fighter.body.grounded && !fighter.profile.boss()
                 && hero.y < fighter.body.y-65 && !fighter.retreating()) {
-            steppingStone=physics.nextPlatform(fighter.body,hero.x,hero.y,PLATFORMS);
+            steppingStone=physics.nextPlatform(fighter.body,hero.x,hero.y,PLATFORMS,fighter.walkingSpeed());
         }
         if (steppingStone!=null) targetX=steppingStone.x()+steppingStone.width()/2;
         double beforeX=fighter.body.x;
@@ -254,12 +255,18 @@ public final class ArenaSimulation {
         boolean meleeStop = !fighter.retreating() && !fighter.profile.ranged() && Math.abs(dx)<80;
         if (meleeStop && steppingStone==null) vx=0;
         if (steppingStone!=null) {
-            vx=Math.signum(targetX-beforeX)*Math.max(280,fighter.enemy.getMovementSpeed()*4);
+            vx=Math.signum(targetX-beforeX)*Math.min(fighter.walkingSpeed(),Math.abs(targetX-beforeX)/dt);
             double gap=Math.max(steppingStone.x()-fighter.body.x,
                     fighter.body.x-(steppingStone.x()+steppingStone.width()));
-            if (gap<=170 && fighter.body.grounded && fighter.jumpCooldown<=0) {
-                fighter.jumpTarget=steppingStone;
-                physics.jump(fighter.body); fighter.jumpCooldown=.9;
+            double jumpReach=fighter.walkingSpeed()*PlatformPhysics.jumpFlightTime(fighter.body.y,steppingStone.y())-15;
+            if (gap<=jumpReach && fighter.body.grounded) {
+                if (fighter.jumpCooldown<=0) {
+                    fighter.jumpTarget=steppingStone;
+                    physics.jump(fighter.body); fighter.jumpCooldown=.9;
+                } else {
+                    // Do not walk off the takeoff ledge while the next jump is cooling down.
+                    vx=0;
+                }
             }
         }
         // Once sharing a platform, distance-keeping must not walk off its edge and
@@ -269,7 +276,7 @@ public final class ArenaSimulation {
                 if (Math.abs(surface.y()-fighter.body.y)<1 && surface.supports(fighter.body.x,0)
                         && surface.supports(hero.x,0)) {
                     double nextX=Math.max(surface.x()+30,Math.min(surface.x()+surface.width()-30,fighter.body.x+vx*dt));
-                    vx=(nextX-fighter.body.x)/dt;
+                    vx=Math.max(-fighter.walkingSpeed(),Math.min(fighter.walkingSpeed(),(nextX-fighter.body.x)/dt));
                     break;
                 }
             }
