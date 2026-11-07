@@ -11,6 +11,17 @@ public final class ArenaCatalog {
                           double range, String spriteFolder, String spriteName, int frameWidth, int frameHeight) {
         public boolean boss() { return type.boss; }
         public boolean ranged() { return attack == Attack.SHOT || attack == Attack.FIREBALL || attack == Attack.POISON; }
+        public com.gamelab.application.audio.WeaponImpact.Surface hitSurface() {
+            return switch (id) {
+                case "demon" -> com.gamelab.application.audio.WeaponImpact.Surface.DEMON;
+                case "slime" -> com.gamelab.application.audio.WeaponImpact.Surface.SLIME;
+                case "mage", "doctor", "witch" -> com.gamelab.application.audio.WeaponImpact.Surface.MYSTIC;
+                case "ghost", "ghost-ranged" -> com.gamelab.application.audio.WeaponImpact.Surface.ETHEREAL;
+                case "soldier", "guardian", "elemental", "ice-golem", "fire-golem", "shadow-knight", "shadow-lord" ->
+                        com.gamelab.application.audio.WeaponImpact.Surface.HARD;
+                default -> com.gamelab.application.audio.WeaponImpact.Surface.FLESH;
+            };
+        }
     }
 
     private static Profile profile(String id, String name, int stage, EnemyType type, Attack attack,

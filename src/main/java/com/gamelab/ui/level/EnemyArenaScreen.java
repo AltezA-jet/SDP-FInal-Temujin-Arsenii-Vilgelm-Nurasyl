@@ -9,6 +9,7 @@ import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.pattern.strategy.BalancedStrategy;
 import com.gamelab.pattern.strategy.HeavyAttackStrategy;
 import com.gamelab.ui.components.MaleWarriorSprite;
+import com.gamelab.ui.audio.*;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
@@ -31,6 +32,7 @@ public final class EnemyArenaScreen extends Pane {
     private final Canvas canvas=new Canvas(W,H);
     private final MaleWarriorSprite hero=new MaleWarriorSprite(170);
     private final ArenaSimulation simulation;
+    private final CombatAudio audio;
     private final Set<KeyCode> keys=EnumSet.noneOf(KeyCode.class);
     private final Map<String,Image> images=new HashMap<>();
     private final ComboBox<String> stage=new ComboBox<>(), encounter=new ComboBox<>();
@@ -63,9 +65,14 @@ public final class EnemyArenaScreen extends Pane {
     }
 
     EnemyArenaScreen(Runnable onBack, GameEventBus events) {
+        this(onBack,events,new JavaSoundPlayer());
+    }
+
+    EnemyArenaScreen(Runnable onBack, GameEventBus events, SoundPlayer soundPlayer) {
         this.onBack=Objects.requireNonNull(onBack);
         PlayerCharacter player=CharacterBuilder.warrior("Испытатель").maxHealth(600).damage(35).defense(0).build();
         simulation=new ArenaSimulation(player,events);
+        audio=new CombatAudio(events,soundPlayer);
         events.subscribe(event -> status.setText(event.message()));
         setPrefSize(W,H); setMinSize(W,H); setMaxSize(W,H);
         setStyle("-fx-background-color: #100d18; -fx-font-size: 18px;");
@@ -124,10 +131,15 @@ public final class EnemyArenaScreen extends Pane {
         CheckBox immortal=new CheckBox("Бессмертие"); immortal.setStyle("-fx-text-fill: #eadbc2;");
         immortal.setOnAction(event -> { simulation.setInvincible(immortal.isSelected()); requestFocus(); });
         paused.setStyle("-fx-text-fill: #eadbc2;");
-        paused.setOnAction(event -> { keys.clear(); requestFocus(); });
+        paused.setOnAction(event -> { keys.clear(); if (paused.isSelected()) audio.stop(); requestFocus(); });
         health.setStyle("-fx-text-fill: #f2d08a;");
         HBox options=new HBox(20,behavior,attack,immortal,paused,health);
         options.relocate(30,119); getChildren().add(options);
+        Label soundLabel=new Label("Звук"); soundLabel.setStyle("-fx-text-fill: #eadbc2;");
+        Slider volume=new Slider(0,100,65); volume.setPrefWidth(150);
+        volume.valueProperty().addListener((obs,old,value) -> audio.setVolume(value.doubleValue()/100));
+        HBox soundOptions=new HBox(12,soundLabel,volume); soundOptions.relocate(1600,127);
+        getChildren().add(soundOptions);
         Label help=new Label("A/D — движение   W/Space — прыжок   S — присесть   Shift — уклонение   J/ЛКМ — удар   Esc — меню");
         help.setStyle("-fx-text-fill: #f2d08a; -fx-font-size: 21px;"); help.relocate(30,956);
         status.setStyle("-fx-text-fill: #dfd4c1; -fx-font-size: 20px;"); status.relocate(30,1000);
@@ -155,7 +167,7 @@ public final class EnemyArenaScreen extends Pane {
         draw();
     }
     private void leave() { stop(); onBack.run(); }
-    public void stop() { timer.stop(); keys.clear(); }
+    public void stop() { timer.stop(); keys.clear(); audio.close(); }
 
     private Image image(String relative) {
         if (images.containsKey(relative)) return images.get(relative);

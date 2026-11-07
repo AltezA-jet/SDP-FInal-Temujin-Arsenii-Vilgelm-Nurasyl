@@ -1,6 +1,10 @@
 package com.gamelab.ui.level;
 
 import com.gamelab.domain.PlayerCharacter;
+import com.gamelab.pattern.observer.GameEventBus;
+import com.gamelab.application.audio.WeaponImpact;
+import com.gamelab.ui.audio.CombatAudio;
+import com.gamelab.ui.audio.JavaSoundPlayer;
 import com.gamelab.ui.components.MaleWarriorSprite;
 import com.gamelab.ui.components.IceEnemySprite;
 import com.gamelab.ui.components.MenuButton;
@@ -28,6 +32,8 @@ public final class TutorialLevelScreen extends Pane {
     private static final double SPRITE_BOTTOM_MARGIN = 0;
     private final PlayerCharacter player;
     private final Runnable onComplete;
+    private final GameEventBus events=new GameEventBus();
+    private final CombatAudio audio=new CombatAudio(events,new JavaSoundPlayer());
     private final Canvas world = new Canvas(W, H);
     private final Image trainingBackground = new Image(
             TutorialLevelScreen.class
@@ -67,6 +73,7 @@ public final class TutorialLevelScreen extends Pane {
         buildHud();
         setFocusTraversable(true); requestFocus();
         setOnKeyPressed(e -> key(e.getCode(), true)); setOnKeyReleased(e -> key(e.getCode(), false));
+        sceneProperty().addListener((obs,old,value) -> { if (old!=null && value==null) stop(); });
         timer.start();
     }
 
@@ -112,8 +119,10 @@ public final class TutorialLevelScreen extends Pane {
     }
 
     private void attackEnemy() {
+        events.publish("PLAYER_ATTACK","Взмах меча");
         if (!enemyAlive || Math.abs(enemyX - x) > 240) return;
         enemyHealth--;
+        events.publish("WEAPON_IMPACT","Удар по ледяному элементалю",new WeaponImpact(WeaponImpact.Surface.HARD,1));
         enemyHealthHud.setHealth(enemyHealth, 3);
         if (enemyHealth <= 0) {
             enemyAlive = false; enemy.setVisible(false); snowballFlying = false; snowball.setVisible(false);
@@ -140,5 +149,5 @@ public final class TutorialLevelScreen extends Pane {
     }
     private static Label label(String text, double x, double y, double w, double h, String color) { Label l = new Label(text); l.relocate(x, y); l.setPrefSize(w, h); l.setTextFill(Color.web(color)); l.setStyle("-fx-font-family: 'Monospaced'; -fx-font-weight: bold;"); return l; }
     private static Label label(String text, double size, double x, double y, double w, double h, String color) { Label l = label(text, x, y, w, h, color); l.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: " + size + "px; -fx-font-weight: bold;"); return l; }
-    public void stop() { timer.stop(); }
+    public void stop() { timer.stop(); audio.close(); }
 }

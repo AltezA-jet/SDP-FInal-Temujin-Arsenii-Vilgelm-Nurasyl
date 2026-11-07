@@ -169,7 +169,9 @@ public final class ArenaSimulation {
             double dx = fighter.body.x-hero.x;
             if (fighter.enemy.isAlive() && Math.abs(dx) <= 155 && Math.abs(fighter.body.y-hero.y) < 105
                     && (facingLeft ? dx <= 30 : dx >= -30)) {
-                combat.attack(player, fighter.enemy, playerStrategy);
+                int dealt=combat.attack(player, fighter.enemy, playerStrategy);
+                if (dealt>0) events.publish("WEAPON_IMPACT","Попадание: "+fighter.profile.name(),
+                        new com.gamelab.application.audio.WeaponImpact(fighter.profile.hitSurface(),dealt));
                 recordDeath(fighter);
             }
         }
@@ -368,6 +370,7 @@ public final class ArenaSimulation {
             default -> shoot(fighter,kind,0,kind==Attack.STONE ? 18 : 12,damage);
         }
         fighter.attacks++;
+        events.publish("ENEMY_ATTACK",fighter.profile.name()+": атака",fighter.profile.id());
         if (fighter.enemy.getBehavior() instanceof WoundedRetreatBehavior wounded) wounded.attackCompleted(fighter.enemy);
         fighter.cooldown=fighter.profile.boss() ? 2.5 : fighter.profile.ranged() ? 1.65 : .9;
         fighter.animation="idle";
