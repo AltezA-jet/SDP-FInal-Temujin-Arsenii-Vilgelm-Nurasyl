@@ -8,18 +8,25 @@ import com.gamelab.domain.shop.Shop;
 import com.gamelab.domain.shop.ShadowfallShopCatalog;
 import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.ui.inventory.InventoryView;
+import com.gamelab.ui.inventory.ItemSpriteResolver;
+import com.gamelab.ui.ShadowfallUi;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.Node;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 import java.util.Objects;
+import java.net.URL;
 
 /** Full-screen shop with the current inventory shown beside the product list. */
 public final class ShopScreen extends Pane {
@@ -46,6 +53,7 @@ public final class ShopScreen extends Pane {
         setPrefSize(W, H);
         setMinSize(W, H);
         setMaxSize(W, H);
+        ShadowfallUi.install(this);
         setStyle("-fx-background-color: #100d18;");
 
         Label title = new Label("TRADER'S HALL");
@@ -55,6 +63,7 @@ public final class ShopScreen extends Pane {
 
         balanceLabel.setTextFill(Color.web("#ffd66e"));
         balanceLabel.setFont(Font.font("Monospaced", 24));
+        balanceLabel.setGraphic(coinIcon());
         balanceLabel.relocate(1510, 52);
 
         Label goodsTitle = sectionTitle("GOODS", 70, 135);
@@ -121,12 +130,55 @@ public final class ShopScreen extends Pane {
         buy.setStyle("-fx-background-color: #6b452b; -fx-text-fill: #fff0c2; -fx-font-weight: bold;");
         buy.setOnAction(event -> purchase(item));
 
-        VBox card = new VBox(12, name, description, price, buy);
+        VBox card = new VBox(9, itemIcon(item), name, description, price, buy);
         card.setPadding(new Insets(18));
-        card.setPrefSize(318, 230);
+        card.setPrefSize(318, 300);
         card.setAlignment(Pos.TOP_LEFT);
         card.setStyle("-fx-background-color: #201b2d; -fx-border-color: #8b6f47; -fx-border-width: 2; -fx-background-radius: 8; -fx-border-radius: 8;");
         return card;
+    }
+
+    private Node itemIcon(Item item) {
+        try {
+            URL url = getClass().getResource(ItemSpriteResolver.resolve(item));
+            if (url != null) {
+                Image image = new Image(url.toExternalForm(), 64, 64, true, false, true);
+                if (!image.isError()) {
+                    ImageView view = new ImageView(image);
+                    view.setFitWidth(64);
+                    view.setFitHeight(64);
+                    view.setPreserveRatio(true);
+                    view.setSmooth(false);
+                    return view;
+                }
+            }
+        } catch (RuntimeException ignored) { }
+        Label placeholder = new Label("✦");
+        placeholder.setTextFill(Color.web("#c6a96d"));
+        placeholder.setStyle("-fx-font-size: 34px; -fx-background-color: #191521; -fx-border-color: #655478;");
+        placeholder.setPrefSize(64, 64);
+        placeholder.setAlignment(Pos.CENTER);
+        return placeholder;
+    }
+
+    private Node coinIcon() {
+        try {
+            URL url = getClass().getResource(ItemSpriteResolver.coin());
+            if (url != null) {
+                Image image = new Image(url.toExternalForm(), 30, 30, true, false, true);
+                if (!image.isError()) {
+                    ImageView view = new ImageView(image);
+                    view.setFitWidth(30);
+                    view.setFitHeight(30);
+                    view.setPreserveRatio(true);
+                    view.setSmooth(false);
+                    return view;
+                }
+            }
+        } catch (RuntimeException ignored) { }
+        Label fallback = new Label("◆");
+        fallback.setTextFill(Color.web("#ffd66e"));
+        return fallback;
     }
 
     private void purchase(Item item) {
