@@ -17,6 +17,8 @@ import com.gamelab.ui.menu.GameMenuScreen;
 import com.gamelab.ui.level.TutorialLevelScreen;
 import com.gamelab.ui.inventory.InventoryScreen;
 import com.gamelab.ui.shop.ShopScreen;
+import com.gamelab.ui.level.EnemyArenaScreen;
+import javafx.scene.control.Button;
 
 
 /**
@@ -30,6 +32,7 @@ public class Main extends Application {
     private Stage stage;
     private MenuScreen menu;
     private GameScreen gameScreen;
+    private EnemyArenaScreen enemyArena;
 
     public static void main(String[] args) {
         launch(args);
@@ -39,6 +42,7 @@ public class Main extends Application {
     public void start(Stage stage) {
         this.stage = stage;
         menu = new MenuScreen();
+        addArenaButton();
         menu.setOnNewGame(this::onNewGame);
         menu.setOnContinue(this::onContinue);
         menu.setOnSettings(this::onSettings);
@@ -56,6 +60,9 @@ public class Main extends Application {
             if (e.getCode() == KeyCode.F11) {
                 stage.setFullScreen(!stage.isFullScreen());
                 e.consume();
+            } else if (e.getCode() == KeyCode.F6 && menu.getScene() == stage.getScene()) {
+                openEnemyArena();
+                e.consume();
             } else {
                 if (menu != null && menu.getScene() == stage.getScene()) menu.handleKey(e.getCode());
                 if (gameScreen != null && gameScreen.getScene() == stage.getScene() && e.getCode() == KeyCode.I) gameScreen.toggleInventory();
@@ -68,7 +75,7 @@ public class Main extends Application {
         stage.setMinWidth(960);
         stage.setMinHeight(540);
         stage.setFullScreenExitHint("F11 - toggle fullscreen");
-        stage.setOnHidden(e -> menu.stop());
+        stage.setOnHidden(e -> { menu.stop(); if (enemyArena != null) enemyArena.stop(); });
         stage.show();
 
         
@@ -96,6 +103,7 @@ public class Main extends Application {
 
     private void returnToMenu() {
         menu = new MenuScreen();
+        addArenaButton();
         menu.setOnNewGame(this::onNewGame);
         menu.setOnContinue(this::onContinue);
         menu.setOnSettings(this::onSettings);
@@ -130,5 +138,20 @@ public class Main extends Application {
     private void onSettings() {
         // TODO: open the settings screen
         System.out.println("[Shadowfall] Settings");
+    }
+
+    private void addArenaButton() {
+        Button button = new Button("АРЕНА ВРАГОВ / F6");
+        button.setStyle("-fx-font-size: 22px; -fx-text-fill: #f2d08a; -fx-background-color: #211729; -fx-border-color: #9b7040; -fx-padding: 14 24;");
+        button.relocate(1490, 970);
+        button.setOnAction(event -> openEnemyArena());
+        menu.getChildren().add(button);
+    }
+
+    private void openEnemyArena() {
+        menu.stop();
+        if (enemyArena != null) enemyArena.stop();
+        enemyArena = new EnemyArenaScreen(this::returnToMenu);
+        showFixedScreen(enemyArena);
     }
 }

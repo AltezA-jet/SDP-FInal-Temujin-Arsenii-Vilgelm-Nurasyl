@@ -36,6 +36,14 @@ public final class Enemy {
     public void moveTowards(double tx,double ty,double dt){double dx=tx-x,dy=ty-y,d=Math.hypot(dx,dy);if(d==0||dt==0)return;double step=Math.min(d,movementSpeed*dt);x+=dx/d*step;y+=dy/d*step;}
     public void moveAway(double tx,double ty,double dt){double dx=x-tx,dy=y-ty,d=Math.hypot(dx,dy);if(d==0||dt==0)return;double step=movementSpeed*dt;x+=dx/d*step;y+=dy/d*step;}
     public void setBehavior(EnemyBehavior b){behavior=Objects.requireNonNull(b);}
+    /** Applies the position resolved by platform physics. */
+    public void setPosition(double x, double y) {
+        if (!Double.isFinite(x) || !Double.isFinite(y)) {
+            throw new IllegalArgumentException("Position must be finite");
+        }
+        this.x = x;
+        this.y = y;
+    }
     /** Returns true only once, allowing CombatService to award a kill exactly once. */
     public boolean claimReward(){if(isAlive()||rewardClaimed)return false;rewardClaimed=true;return true;}
     public String getId(){return id;} public String getName(){return name;} public int getHealth(){return health;}
