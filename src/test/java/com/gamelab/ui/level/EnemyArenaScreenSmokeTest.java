@@ -34,7 +34,7 @@ class EnemyArenaScreenSmokeTest {
                 GameEventBus events=new GameEventBus();
                 java.util.List<String> actions=new java.util.ArrayList<>();
                 events.subscribe(event -> actions.add(event.type()));
-                screen=new EnemyArenaScreen(() -> { },events);
+                screen=new EnemyArenaScreen(() -> { },events,cue -> { });
                 new Scene(screen,1920,1080);
                 screen.applyCss(); screen.layout();
                 CheckBox pause=(CheckBox)screen.lookupAll(".check-box").stream()
