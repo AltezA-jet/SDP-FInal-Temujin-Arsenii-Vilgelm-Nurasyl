@@ -114,7 +114,7 @@ public final class CharacterCreationScreen extends Pane {
 
         // The preview is anchored by the centre of the feet, equivalent to translate(-50%, -100%).
         warriorPreview.relocate(PREVIEW_ANCHOR_X, PREVIEW_ANCHOR_Y);
-        warriorPreview.setTranslateX(-PREVIEW_SIZE / 2);
+        warriorPreview.setTranslateX(-warriorPreview.prefWidth(-1) / 2);
         warriorPreview.setTranslateY(-PREVIEW_SIZE);
         getChildren().add(warriorPreview);
         Label centerNote = label("THE VEIL OPENS TO THOSE WHO CHOOSE", 13, "#c09a62"); centerNote.setLayoutX(690); centerNote.setLayoutY(868); centerNote.setPrefWidth(540); centerNote.setAlignment(Pos.CENTER); getChildren().add(centerNote);

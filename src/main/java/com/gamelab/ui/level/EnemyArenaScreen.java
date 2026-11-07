@@ -30,7 +30,7 @@ public final class EnemyArenaScreen extends Pane {
     private static final double W=1920, H=1080;
     private static final String ROOT="/assets/enemies/";
     private final Canvas canvas=new Canvas(W,H);
-    private final MaleWarriorSprite hero=new MaleWarriorSprite(170);
+    private final MaleWarriorSprite hero=new MaleWarriorSprite(MaleWarriorSprite.GAME_HEIGHT);
     private final ArenaSimulation simulation;
     private final CombatAudio audio;
     private final Set<KeyCode> keys=EnumSet.noneOf(KeyCode.class);
@@ -160,7 +160,7 @@ public final class EnemyArenaScreen extends Pane {
         requestFocus();
     }
     private void render() {
-        hero.relocate(simulation.hero().x-57,simulation.hero().y-170);
+        hero.relocate(Math.rint(simulation.hero().x-hero.prefWidth(-1)/2),Math.rint(simulation.hero().y-hero.prefHeight(-1)));
         hero.setOpacity(simulation.dodging() ? .4 : 1);
         health.setText("HP "+simulation.player().getHealth()+" / "+simulation.player().getMaxHealth()
                 +(simulation.poisoned() ? "   ЯД" : "")+"    Убито типов: "+simulation.defeatedTypes().size());
@@ -212,8 +212,8 @@ public final class EnemyArenaScreen extends Pane {
 
     private void drawEnemy(GraphicsContext g,ArenaSimulation.Fighter fighter) {
         ArenaCatalog.Profile profile=fighter.profile;
-        double height=profile.boss() ? 195 : profile.frameHeight()==64 ? 85 : 140;
-        double width=height*profile.frameWidth()/profile.frameHeight();
+        double height=profile.frameHeight()*MaleWarriorSprite.GAME_SCALE;
+        double width=profile.frameWidth()*MaleWarriorSprite.GAME_SCALE;
         String animation=fighter.animation;
         String base=profile.spriteFolder()+"/"+profile.spriteName();
         Image hurt=fighter.hurtTime>0 && !profile.spriteFolder().isEmpty() ? image(base+"_hurt.png") : null;
@@ -221,7 +221,7 @@ public final class EnemyArenaScreen extends Pane {
         if (sprite==null && animation.startsWith("attack")) sprite=image(base+"_attack.png");
         if (sprite==null && !profile.spriteFolder().isEmpty()) sprite=image(base+"_idle.png");
         if (sprite==null && profile.id().equals("elemental")) sprite=image(base+".png");
-        double x=fighter.body.x, y=fighter.body.y;
+        double x=Math.rint(fighter.body.x), y=Math.rint(fighter.body.y);
         if (sprite!=null) {
             int frames=Math.max(1,(int)sprite.getWidth()/profile.frameWidth());
             int frame=hurt!=null ? Math.min(frames-1,(int)(fighter.hurtElapsed/.12)) : (int)(time*8)%frames;

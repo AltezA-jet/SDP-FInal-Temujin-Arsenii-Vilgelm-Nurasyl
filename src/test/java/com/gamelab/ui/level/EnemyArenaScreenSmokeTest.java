@@ -42,6 +42,8 @@ class EnemyArenaScreenSmokeTest {
                 MaleWarriorSprite hero=(MaleWarriorSprite)screen.getChildren().stream()
                         .filter(n -> n instanceof MaleWarriorSprite).findFirst().orElseThrow();
                 assertTrue(hero.isMouseTransparent(),"Hero bounds must not swallow arena clicks");
+                assertEquals(96,hero.prefWidth(-1),.001);
+                assertEquals(144,hero.prefHeight(-1),.001);
                 Event.fireEvent(hero,new MouseEvent(MouseEvent.MOUSE_PRESSED,350,820,350,820,MouseButton.PRIMARY,1,
                         false,false,false,false,true,false,false,false,false,true,null));
                 assertEquals(1,actions.stream().filter(type -> type.equals("PLAYER_ATTACK")).count(),

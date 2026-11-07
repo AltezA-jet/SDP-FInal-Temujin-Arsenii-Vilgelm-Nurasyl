@@ -16,6 +16,9 @@ import java.util.Map;
 public final class MaleWarriorSprite extends Pane {
     private static final String ROOT = "/assets/male_warrior/";
     private static final int FRAME_WIDTH = 64, FRAME_HEIGHT = 96, FRAME_COUNT = 4;
+    /** All world sprites use the same number of screen units per source pixel. */
+    public static final double GAME_SCALE = 1.5;
+    public static final double GAME_HEIGHT = FRAME_HEIGHT * GAME_SCALE;
     private final ImageView sprite = new ImageView();
     private final Map<String, Image> images = new HashMap<>();
     private String hairName = "black", outfitName = "blue", state = "idle";
@@ -24,7 +27,8 @@ public final class MaleWarriorSprite extends Pane {
     private boolean attacking, walking;
 
     public MaleWarriorSprite(double size) {
-        setPrefSize(size, size); setMinSize(size, size); setMaxSize(size, size);
+        double width = size * FRAME_WIDTH / FRAME_HEIGHT;
+        setPrefSize(width, size); setMinSize(width, size); setMaxSize(width, size);
         sprite.setPreserveRatio(true); sprite.setSmooth(false);
         sprite.fitWidthProperty().bind(widthProperty()); sprite.fitHeightProperty().bind(heightProperty());
         sprite.setMouseTransparent(true); getChildren().add(sprite);

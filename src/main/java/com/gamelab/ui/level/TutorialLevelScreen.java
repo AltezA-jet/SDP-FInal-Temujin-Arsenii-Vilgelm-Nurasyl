@@ -39,8 +39,8 @@ public final class TutorialLevelScreen extends Pane {
             TutorialLevelScreen.class
                     .getResource("/assets/training level textures/training bg.jpg")
                     .toExternalForm());
-    private final MaleWarriorSprite hero = new MaleWarriorSprite(210);
-    private final IceEnemySprite enemy = new IceEnemySprite(210);
+    private final MaleWarriorSprite hero = new MaleWarriorSprite(MaleWarriorSprite.GAME_HEIGHT);
+    private final IceEnemySprite enemy = new IceEnemySprite(MaleWarriorSprite.GAME_HEIGHT);
     private final HealthHud healthHud = new HealthHud();
     private final EnemyHealthHud enemyHealthHud = new EnemyHealthHud("tutorial-enemy", 3, 3);
     private final ImageView snowball = new ImageView(new Image(TutorialLevelScreen.class.getResource("/assets/2 Этап-Enemy(1,2,3)/ice_snowball.png").toExternalForm()));
@@ -65,8 +65,8 @@ public final class TutorialLevelScreen extends Pane {
         done.put("walk", false); done.put("jump", false); done.put("crouch", false); done.put("attack", false);
         setPrefSize(W, H); setMinSize(W, H); setMaxSize(W, H); setClip(new Rectangle(W, H));
         getChildren().add(world);
-        hero.setConfiguration(player.getHairColorIndex(), player.getOutfitIndex(), player.getHeadwearIndex()); hero.relocate(x, y - 185); getChildren().add(hero);
-        enemy.relocate(1450, GROUND_Y - 190); getChildren().add(enemy);
+        hero.setConfiguration(player.getHairColorIndex(), player.getOutfitIndex(), player.getHeadwearIndex()); hero.relocate(x-hero.prefWidth(-1)/2, y-hero.prefHeight(-1)); getChildren().add(hero);
+        enemy.relocate(enemyX-enemy.prefWidth(-1)/2, GROUND_Y-enemy.prefHeight(-1)); getChildren().add(enemy);
         healthHud.relocate(32, 32); healthHud.setHealth(player.getHealth(), player.getMaxHealth()); getChildren().add(healthHud);
         enemyHealthHud.relocate(enemyX - 55, GROUND_Y - 220); getChildren().add(enemyHealthHud);
         snowball.setFitWidth(34); snowball.setFitHeight(34); snowball.setSmooth(false); snowball.setVisible(false); snowball.setMouseTransparent(true); getChildren().add(snowball);
@@ -96,14 +96,14 @@ public final class TutorialLevelScreen extends Pane {
             enemyX += enemyDirection * 72 * dt;
             if (enemyX < 1190 || enemyX > 1500) enemyDirection *= -1;
             // Enemy atlas faces left by default: mirror only when the hero is to its right.
-            enemy.setWalking(true); enemy.setFacingLeft(enemyX < x); enemy.relocate(enemyX, 565); enemy.update(dt);
+            enemy.setWalking(true); enemy.setFacingLeft(enemyX < x); enemy.relocate(Math.rint(enemyX-enemy.prefWidth(-1)/2), GROUND_Y-enemy.prefHeight(-1)); enemy.update(dt);
             enemyHealthHud.relocate(enemyX - 55, GROUND_Y - 220);
             snowTimer += dt;
         }
         if (enemyAlive && !snowballFlying && snowTimer > 2.2) { snowTimer = 0; snowballFlying = true; snowX = enemyX + 40; snowY = 665; enemy.setAttacking(); snowball.setVisible(true); }
         if (snowballFlying) { snowX -= 420 * dt; snowY += Math.sin(time * 8) * 3; snowball.relocate(snowX, snowY); if (snowX < x - 30) { snowballFlying = false; snowball.setVisible(false); } }
         if (jumping) { vy += 1050 * dt; y += vy * dt; if (y >= GROUND_Y - SPRITE_BOTTOM_MARGIN) { y = GROUND_Y - SPRITE_BOTTOM_MARGIN; vy = 0; jumping = false; } }
-        hero.relocate(x, y - 185);
+        hero.relocate(Math.rint(x-hero.prefWidth(-1)/2), Math.rint(y-hero.prefHeight(-1)));
         if (left && !right) hero.setFacingLeft(true);
         else if (right && !left) hero.setFacingLeft(false);
         hero.setWalking(walking, crouching); hero.update(dt);
