@@ -9,6 +9,7 @@ import com.gamelab.domain.item.Weapon;
 import com.gamelab.domain.rune.Rune;
 import com.gamelab.domain.rune.RuneLoadout;
 import com.gamelab.ui.components.MenuButton;
+import com.gamelab.ui.ShadowfallUi;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -20,6 +21,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.StackPane;
 
 import java.net.URL;
 import java.util.List;
@@ -44,6 +46,8 @@ public final class InventoryController {
     private final TilePane inventoryGrid;
     private final HBox runeSlots;
     private final Label statusLabel;
+    private final Label selectedDescription;
+    private Item selectedItem;
 
     public InventoryController(
             Inventory inventory,
@@ -70,6 +74,7 @@ public final class InventoryController {
         inventoryGrid = new TilePane();
         runeSlots = new HBox(12);
         statusLabel = new Label();
+        selectedDescription = new Label("Select an item to view its description.");
 
         configureView();
         refresh();
@@ -98,6 +103,7 @@ public final class InventoryController {
 
     private void configureView() {
         root.setPadding(new Insets(24));
+        ShadowfallUi.install(root);
         root.setStyle(
                 "-fx-background-color: #100d18;"
         );
@@ -159,8 +165,12 @@ public final class InventoryController {
                 6,
                 createSectionLabel("RUNE SLOTS"),
                 runeSlots,
+                createSectionLabel("ITEM DETAILS"),
+                selectedDescription,
                 statusLabel
         );
+        selectedDescription.setWrapText(true);
+        selectedDescription.getStyleClass().add("sf-text");
 
         bottom.setPadding(
                 new Insets(18, 0, 0, 0)
@@ -222,6 +232,8 @@ public final class InventoryController {
                 inventory.getItems();
 
         if (items.isEmpty()) {
+            selectedItem = null;
+            selectedDescription.setText("Your inventory is empty.");
             Label empty =
                     new Label("Inventory is empty");
 
@@ -230,14 +242,21 @@ public final class InventoryController {
             inventoryGrid.getChildren().add(
                     empty
             );
-
-            return;
         }
 
         for (Item item : items) {
             inventoryGrid.getChildren().add(
                     createItemButton(item)
             );
+        }
+        for (int i = 0; i < inventory.getRemainingSlots(); i++) {
+            Label empty = new Label("EMPTY SLOT");
+            empty.getStyleClass().add("sf-muted");
+            VBox slot = new VBox(empty);
+            slot.setAlignment(Pos.CENTER);
+            slot.setPrefSize(130, 110);
+            slot.getStyleClass().add("sf-empty-slot");
+            inventoryGrid.getChildren().add(slot);
         }
     }
 
@@ -250,7 +269,16 @@ public final class InventoryController {
                 130,
                 110
         );
-        button.setOnAction(() -> handleItemClick(item));
+        button.setOnAction(() -> {
+            selectedItem = item;
+            selectedDescription.setText(item.getDescription());
+            renderInventory();
+            handleItemClick(item);
+        });
+        button.setSelected(selectedItem == item);
+        long quantity = inventory.getItems().stream().filter(candidate -> candidate.getClass() == item.getClass()
+                && candidate.getName().equals(item.getName())).count();
+        if (quantity > 1) button.setText(item.getName() + " ×" + quantity);
 
         return button;
     }
@@ -376,38 +404,31 @@ public final class InventoryController {
         return slot;
     }
 
-    private ImageView createImageView(
+    private javafx.scene.Node createImageView(
             Item item,
             double size
     ) {
-        String path =
-                ItemSpriteResolver.resolve(item);
-
-        URL resource =
-                getClass().getResource(path);
-
-        if (resource == null) {
-            throw new IllegalStateException(
-                    "Missing sprite: " + path
-            );
-        }
-
-        Image image = new Image(
-                resource.toExternalForm(),
-                size,
-                size,
-                false,
-                false
-        );
-
-        ImageView imageView =
-                new ImageView(image);
-
-        imageView.setFitWidth(size);
-        imageView.setFitHeight(size);
-        imageView.setSmooth(false);
-
-        return imageView;
+        try {
+            String path = ItemSpriteResolver.resolve(item);
+            URL resource = getClass().getResource(path);
+            if (resource != null) {
+                Image image = new Image(resource.toExternalForm(), size, size, true, false, true);
+                if (!image.isError()) {
+                    ImageView imageView = new ImageView(image);
+                    imageView.setFitWidth(size);
+                    imageView.setFitHeight(size);
+                    imageView.setPreserveRatio(true);
+                    imageView.setSmooth(false);
+                    return imageView;
+                }
+            }
+        } catch (RuntimeException ignored) { }
+        Label icon = new Label("✦");
+        icon.setStyle("-fx-text-fill:#c6a96d;-fx-font-size:" + Math.max(20, size * .55) + "px;");
+        StackPane fallback = new StackPane(icon);
+        fallback.setPrefSize(size, size);
+        fallback.setStyle("-fx-background-color:#191521;-fx-border-color:#655478;");
+        return fallback;
     }
 
     private Label createSectionLabel(

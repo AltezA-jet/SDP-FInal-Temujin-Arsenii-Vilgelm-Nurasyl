@@ -10,6 +10,10 @@ public interface Item {
 
     String getRequiredClass();
 
+    default double getWeight() { return 0.0; }
+
+    default String getInventoryCategory() { return "GENERAL"; }
+
     default boolean canBeUsedBy(String characterClass) {
         if (characterClass == null || characterClass.isBlank()) {
             return false;
