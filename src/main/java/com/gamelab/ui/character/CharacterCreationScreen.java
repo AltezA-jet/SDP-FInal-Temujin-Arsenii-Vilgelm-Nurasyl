@@ -12,7 +12,11 @@ import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.Ellipse;
 import javafx.scene.text.Font;
 
 import java.util.function.Consumer;
@@ -20,6 +24,10 @@ import java.util.function.Consumer;
 /** SHADOWFALL character forge. Empty framed slots are deliberate insertion points for future sprites. */
 public final class CharacterCreationScreen extends Pane {
     public static final double W = 1920, H = 1080;
+    private static final double PREVIEW_SCREEN_W = 1909.0;
+    private static final double PREVIEW_ANCHOR_X = W * 960.0 / PREVIEW_SCREEN_W;
+    private static final double PREVIEW_ANCHOR_Y = H * 658.0 / 1080.0;
+    private static final double PREVIEW_SIZE = H * 190.0 / 1080.0;
     private static final String[] CLASSES = {"WARRIOR", "ARCHER", "MAGE", "ASSASSIN"};
     private static final String[] CLASS_NAMES = {"Воин", "Лучник", "Маг", "Ассасин"};
     private static final String[] CLASS_INFO = {
@@ -45,7 +53,8 @@ public final class CharacterCreationScreen extends Pane {
     private final Consumer<PlayerCharacter> onCreate;
     private final Runnable onBack;
     private final Canvas scene = new Canvas(W, H), fx = new Canvas(W, H);
-    private final MaleWarriorSprite warriorPreview = new MaleWarriorSprite(360);
+    private final MaleWarriorSprite warriorPreview = new MaleWarriorSprite(PREVIEW_SIZE);
+    private final Ellipse previewShadow = new Ellipse(45, 9);
     private final MenuButton[] classButtons = new MenuButton[4], genderButtons = new MenuButton[2], hairButtons = new MenuButton[4], colorButtons = new MenuButton[7], outfitButtons = new MenuButton[4], headwearButtons = new MenuButton[5];
     private final java.util.List<MenuButton> menuButtons = new java.util.ArrayList<>();
     private final Label description = new Label(), stats = new Label(), notice = new Label();
@@ -92,10 +101,21 @@ public final class CharacterCreationScreen extends Pane {
         stats.setLayoutX(101); stats.setLayoutY(741); stats.setPrefWidth(356); stats.setStyle("-fx-font-size:13px;"); getChildren().add(stats);
 
         // Central rune plinth is part of the world illustration, with a deliberately empty sprite bay.
-        Label preview = label("CHARACTER PREVIEW", 22, "#c5a5ef"); preview.setLayoutX(710); preview.setLayoutY(492); preview.setPrefWidth(500); preview.setAlignment(Pos.CENTER);
-        Label previewSub = label("SPRITE SOCKET  //  AWAITING SOUL", 12, "#8c78a8"); previewSub.setLayoutX(760); previewSub.setLayoutY(526); previewSub.setPrefWidth(400); previewSub.setAlignment(Pos.CENTER);
+        Label preview = label("CHARACTER PREVIEW", 22, "#c5a5ef"); preview.setLayoutX(710); preview.setLayoutY(380); preview.setPrefWidth(500); preview.setAlignment(Pos.CENTER);
+        Label previewSub = label("SPRITE SOCKET  //  AWAITING SOUL", 12, "#8c78a8"); previewSub.setLayoutX(760); previewSub.setLayoutY(410); previewSub.setPrefWidth(400); previewSub.setAlignment(Pos.CENTER);
         getChildren().addAll(preview, previewSub);
-        warriorPreview.relocate(780, 170);
+        previewShadow.setMouseTransparent(true);
+        previewShadow.setFill(new RadialGradient(
+                0, 0, .5, .5, .5, true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.rgb(0, 0, 0, .38)),
+                new Stop(1, Color.TRANSPARENT)));
+        previewShadow.relocate(PREVIEW_ANCHOR_X - 45, PREVIEW_ANCHOR_Y - 9);
+        getChildren().add(previewShadow);
+
+        // The preview is anchored by the centre of the feet, equivalent to translate(-50%, -100%).
+        warriorPreview.relocate(PREVIEW_ANCHOR_X, PREVIEW_ANCHOR_Y);
+        warriorPreview.setTranslateX(-PREVIEW_SIZE / 2);
+        warriorPreview.setTranslateY(-PREVIEW_SIZE);
         getChildren().add(warriorPreview);
         Label centerNote = label("THE VEIL OPENS TO THOSE WHO CHOOSE", 13, "#c09a62"); centerNote.setLayoutX(690); centerNote.setLayoutY(868); centerNote.setPrefWidth(540); centerNote.setAlignment(Pos.CENTER); getChildren().add(centerNote);
 

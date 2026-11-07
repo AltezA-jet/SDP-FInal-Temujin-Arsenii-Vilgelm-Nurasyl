@@ -1,0 +1,74 @@
+.sf-root {
+    -fx-background-color: rgba(12, 10, 18, 0.94);
+    -fx-font-family: "Serif";
+}
+.sf-panel {
+    -fx-background-color: rgba(28, 23, 36, 0.94);
+    -fx-border-color: #8b6f47;
+    -fx-border-width: 2;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+.sf-title {
+    -fx-text-fill: #f2d49b;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+}
+.sf-section-title {
+    -fx-text-fill: #c6a96d;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+.sf-text {
+    -fx-text-fill: #e6dcc9;
+    -fx-font-size: 14px;
+}
+.sf-muted {
+    -fx-text-fill: #a99b88;
+    -fx-font-size: 13px;
+}
+.sf-accent-gold {
+    -fx-text-fill: #efcf84;
+    -fx-font-weight: bold;
+}
+.sf-health {
+    -fx-text-fill: #ef7777;
+    -fx-font-weight: bold;
+}
+.sf-button {
+    -fx-background-color: #30283f;
+    -fx-text-fill: #f4e7cf;
+    -fx-border-color: #8b6f47;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+.sf-button:hover {
+    -fx-background-color: #493b50;
+    -fx-border-color: #e0bb72;
+}
+.sf-item {
+    -fx-background-color: rgba(48, 40, 63, 0.96);
+    -fx-text-fill: #f4e7cf;
+    -fx-border-color: #655478;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+.sf-item:hover {
+    -fx-background-color: #493b50;
+    -fx-border-color: #c6a96d;
+}
+.sf-item:selected {
+    -fx-background-color: #51402d;
+    -fx-border-color: #f0ca78;
+    -fx-border-width: 2;
+}
+.sf-empty-slot {
+    -fx-background-color: rgba(18, 15, 24, 0.9);
+    -fx-border-color: #514659;
+    -fx-border-style: dashed;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
