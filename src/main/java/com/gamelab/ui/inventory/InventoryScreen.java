@@ -23,6 +23,10 @@ public final class InventoryScreen extends Pane {
             RuneService runeService,
             Runnable onBack
     ) {
+        this(inventory,loadout,runeService,onBack,"KNIGHT");
+    }
+    public InventoryScreen(Inventory inventory,RuneLoadout loadout,RuneService runeService,
+                           Runnable onBack,String characterClass) {
         setPrefSize(W, H); setMinSize(W, H); setMaxSize(W, H);
         setStyle("-fx-background-color:#08050e;");
 
@@ -51,7 +55,8 @@ public final class InventoryScreen extends Pane {
         InventoryController controller = new InventoryController(
                 inventory,
                 loadout,
-                runeService
+                runeService,
+                characterClass
         );
         StackPane view = new StackPane(controller.getView());
         view.relocate(180, 90);

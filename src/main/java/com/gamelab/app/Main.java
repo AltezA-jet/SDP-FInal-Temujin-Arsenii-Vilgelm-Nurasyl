@@ -21,10 +21,12 @@ import com.gamelab.ui.character.CharacterCreationScreen;
 import com.gamelab.ui.menu.MenuScreen;
 import com.gamelab.ui.menu.GameMenuScreen;
 import com.gamelab.ui.level.TutorialLevelScreen;
-import com.gamelab.ui.level.StageOneLevelScreen;
+import com.gamelab.application.arena.CampaignRun;
 import com.gamelab.ui.inventory.InventoryScreen;
 import com.gamelab.ui.level.EnemyArenaScreen;
 import com.gamelab.ui.shop.StageOneMarketScreen;
+import com.gamelab.ui.audio.CombatAudio;
+import com.gamelab.ui.audio.JavaSoundPlayer;
 import javafx.scene.control.Button;
 
 
@@ -45,6 +47,10 @@ public class Main extends Application {
     private RuneLoadout campaignRuneLoadout;
     private RuneService campaignRuneService;
     private GameMenuScreen gameMenu;
+    private CampaignRun campaignRun;
+    private EnemyArenaScreen campaignArena;
+    private CombatAudio campaignAudio;
+    private boolean tutorialCompleted;
 
     public static void main(String[] args) {
         launch(args);
@@ -62,7 +68,7 @@ public class Main extends Application {
             menu.stop();
             Platform.exit();
         });
-        menu.setContinueEnabled(true); // TODO: set to "a save exists in the database"
+        menu.setContinueEnabled(false);
 
         // 1:1 (1920x1080) when the screen is big enough, otherwise the largest 16:9 window that fits
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
@@ -86,7 +92,7 @@ public class Main extends Application {
         stage.setMinWidth(960);
         stage.setMinHeight(540);
         stage.setFullScreenExitHint("F11 - toggle fullscreen");
-        stage.setOnHidden(e -> { menu.stop(); if (enemyArena != null) enemyArena.stop(); });
+        stage.setOnHidden(e -> { menu.stop(); if (enemyArena != null) enemyArena.stop(); if(campaignArena!=null) campaignArena.stop(); if(campaignAudio!=null) campaignAudio.close(); });
         stage.show();
 
 
@@ -98,6 +104,9 @@ public class Main extends Application {
     }
 
     private void onCharacterCreated(PlayerCharacter player) {
+        if(campaignArena!=null) { campaignArena.stop(); campaignArena=null; }
+        if(campaignAudio!=null) campaignAudio.close();
+        tutorialCompleted=false;
         campaignPlayer = player;
         campaignInventory = new Inventory(16);
         campaignWallet = new CoinWallet();
@@ -106,18 +115,15 @@ public class Main extends Application {
         campaignInventory.equipWeapon(starterSword, player.getCharacterClass());
         campaignRuneLoadout = new RuneLoadout(starterSword);
         campaignRuneService = new RuneService(new GameEventBus());
-        gameMenu = new GameMenuScreen(
-                player,
-                this::returnToMenu,
-                campaignInventory,
-                this::showInventory
-        );
+        campaignRun=new CampaignRun(player,campaignInventory,campaignWallet,campaignRuneLoadout);
+        campaignAudio=new CombatAudio(campaignRun.events(),new JavaSoundPlayer());
         showFixedScreen(new TutorialLevelScreen(player, this::onTutorialCompleted));
     }
 
     private void onTutorialCompleted() {
-        campaignWallet.addCoins(180);
-        showStageOneMarket(0);
+        if(!tutorialCompleted) campaignWallet.addCoins(180);
+        tutorialCompleted=true;
+        showCampaignMarket(0);
     }
 
     private void showInventory(Inventory inventory) {
@@ -125,54 +131,78 @@ public class Main extends Application {
                 inventory,
                 campaignRuneLoadout,
                 campaignRuneService,
-                () -> showFixedScreen(gameMenu)
+                () -> showCampaignHub(this::resumeCampaign),
+                campaignPlayer.getCharacterClass()
         ));
     }
 
-    /**
-     * Stage 1 should call this callback after its final wave. The current inventory tab opens the
-     * same screen as a preview until the stage-one JavaFX scene is connected.
-     */
-    private void onStageOneCompleted() {
-        showStageOneMarket(1);
+    private void onCampaignStageCompleted() {
+        if(!campaignRun.completeStage()) return;
+        if(campaignArena!=null) { campaignArena.stop();campaignArena=null; }
+        if(campaignRun.finished()) showCampaignVictory(); else showCampaignMarket(campaignRun.completedStage());
     }
 
-    private void showStageOneMarket(int completedStage) {
+    private void showCampaignMarket(int completedStage) {
         if (campaignPlayer == null || campaignInventory == null || campaignWallet == null) return;
-        Runnable continueAction = completedStage == 0
-                ? this::showStageOneLevel
-                : () -> showFixedScreen(gameMenu);
+        Runnable continueAction = this::startNextCampaignStage;
         showFixedScreen(new StageOneMarketScreen(
                 campaignPlayer,
                 campaignInventory,
                 campaignWallet,
                 completedStage,
-                () -> showFixedScreen(gameMenu),
+                () -> showCampaignHub(() -> showCampaignMarket(completedStage)),
                 continueAction
         ));
     }
 
-    private void showStageOneLevel() {
+    private void startNextCampaignStage() {
         if (campaignPlayer == null || campaignInventory == null
                 || campaignWallet == null || campaignRuneLoadout == null) return;
-        showFixedScreen(new StageOneLevelScreen(
-                campaignPlayer,
-                campaignInventory,
-                campaignWallet,
-                campaignRuneLoadout,
-                this::onStageOneCompleted,
-                () -> showStageOneMarket(0)
-        ));
+        campaignRun.enterNextStage();
+        campaignArena=new EnemyArenaScreen(campaignRun,() -> showCampaignHub(this::resumeCampaign),campaignAudio);
+        campaignArena.setOnStageCompleted(number -> onCampaignStageCompleted());
+        campaignArena.setUsePotion(campaignRun::useHealthPotion);
+        campaignArena.setPotionCount(campaignRun::healthPotionCount);
+        showFixedScreen(campaignArena);
+    }
+
+    private void resumeCampaign() {
+        if(campaignRun==null) return;
+        campaignRun.syncEquipment();campaignRun.claimPendingRunes();
+        if(campaignRun.finished()) { showCampaignVictory();return; }
+        if(campaignArena!=null && campaignRun.activeStage()>campaignRun.completedStage()) {
+            showFixedScreen(campaignArena);campaignArena.resume();
+        } else showCampaignMarket(campaignRun.completedStage());
+    }
+
+    private void showCampaignHub(Runnable resume) {
+        gameMenu=new GameMenuScreen(campaignPlayer,resume,campaignInventory,this::showInventory,campaignWallet);
+        gameMenu.setShopAvailable(campaignArena==null);
+        gameMenu.setOnShop(inventory -> showCampaignMarket(campaignRun.completedStage()));
+        Button menuButton=new Button("В главное меню"); menuButton.relocate(1350,1010);
+        menuButton.setStyle("-fx-font-size:20px;");menuButton.setOnAction(e -> returnToMenu());
+        gameMenu.getChildren().add(menuButton);showFixedScreen(gameMenu);
+    }
+
+    private void showCampaignVictory() {
+        Pane victory=new Pane();victory.setPrefSize(1920,1080);victory.setStyle("-fx-background-color:#100d18;");
+        javafx.scene.control.Label title=new javafx.scene.control.Label("ТЁМНЫЙ ЛОРД ПОВЕРЖЕН");
+        title.setStyle("-fx-text-fill:#f2d08a;-fx-font-size:48px;");title.relocate(570,330);
+        javafx.scene.control.Label result=new javafx.scene.control.Label(campaignPlayer.getName()+" · Уровень "+campaignPlayer.getLevel()+" · "+campaignWallet.getBalance()+" монет");
+        result.setStyle("-fx-text-fill:#eadbc2;-fx-font-size:28px;");result.relocate(620,450);
+        Button back=new Button("В главное меню");back.setStyle("-fx-font-size:25px;");back.relocate(810,580);back.setOnAction(e -> returnToMenu());
+        victory.getChildren().addAll(title,result,back);showFixedScreen(victory);
     }
 
     private void returnToMenu() {
+        if(campaignArena!=null) campaignArena.suspend();
         menu = new MenuScreen();
         addArenaButton();
         menu.setOnNewGame(this::onNewGame);
         menu.setOnContinue(this::onContinue);
         menu.setOnSettings(this::onSettings);
         menu.setOnExit(() -> { menu.stop(); Platform.exit(); });
-        menu.setContinueEnabled(true);
+        menu.setContinueEnabled(campaignRun!=null);
         showFixedScreen(menu);
     }
 
@@ -195,8 +225,10 @@ public class Main extends Application {
     }
 
     private void onContinue() {
-        // TODO: load the last save and open the game scene
-        System.out.println("[Shadowfall] Continue");
+        if(campaignRun==null) return;
+        menu.stop();
+        if(!tutorialCompleted) showFixedScreen(new TutorialLevelScreen(campaignPlayer,this::onTutorialCompleted));
+        else resumeCampaign();
     }
 
     private void onSettings() {

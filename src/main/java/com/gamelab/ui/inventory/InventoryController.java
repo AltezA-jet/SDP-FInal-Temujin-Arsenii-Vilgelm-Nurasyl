@@ -83,6 +83,11 @@ public final class InventoryController {
             RuneLoadout loadout,
             RuneService runeService
     ) {
+        this(inventory,loadout,runeService,"KNIGHT");
+    }
+    private final String characterClass;
+    public InventoryController(Inventory inventory,RuneLoadout loadout,RuneService runeService,String characterClass) {
+        this.characterClass=Objects.requireNonNull(characterClass);
         this.inventory = Objects.requireNonNull(inventory, "Inventory cannot be null");
         this.loadout = Objects.requireNonNull(loadout, "Rune loadout cannot be null");
         this.runeService = Objects.requireNonNull(runeService, "Rune service cannot be null");
@@ -397,6 +402,17 @@ public final class InventoryController {
                     infoLabel(String.format("Скорость: %.2f", weapon.getAttackSpeed())),
                     infoLabel("Слоты рун: " + weapon.getRuneSlotCount())
             );
+            MenuButton equip=new MenuButton(loadout.getWeapon()==weapon?"ЭКИПИРОВАНО":"ЭКИПИРОВАТЬ",250,58);
+            equip.setDisable(loadout.getWeapon()==weapon);
+            equip.setOnAction(() -> {
+                try {
+                    if(!weapon.canBeUsedBy(characterClass)) throw new IllegalArgumentException("Оружие недоступно этому классу");
+                    loadout.changeWeapon(weapon);inventory.equipWeapon(weapon,characterClass);
+                    showResult(RuneActionResult.successful("Меч экипирован"));
+                } catch(IllegalArgumentException|IllegalStateException ex) { showResult(RuneActionResult.failed(ex.getMessage())); }
+                refresh();
+            });
+            detailsPanel.getChildren().add(equip);
         } else if (selectedItem instanceof Potion) {
             Label useHint = infoLabel("Зелье используется во время боя.");
             useHint.setWrapText(true);

@@ -14,6 +14,7 @@ import java.util.Map;
 
 /** Composites the supplied full-silhouette layers into a correctly ordered 64x96 frame. */
 public final class MaleWarriorSprite extends Pane {
+    public static final double GAME_SCALE=1.5, GAME_HEIGHT=96*GAME_SCALE;
     private static final String ROOT = "/assets/male_warrior/";
     private static final int FRAME_WIDTH = 64, FRAME_HEIGHT = 96, FRAME_COUNT = 4;
     private final ImageView sprite = new ImageView();
@@ -22,6 +23,15 @@ public final class MaleWarriorSprite extends Pane {
     private int headwearIndex = -1, frame;
     private double frameTime;
     private boolean attacking, walking;
+    private String swordName="starter_sword";
+    private double attackFrameDuration=.10;
+
+    public void setWeapon(String name) { swordName=name.toLowerCase(java.util.Locale.ROOT).replace(' ','_'); render(); }
+    public void setAttackDuration(double seconds) { attackFrameDuration=seconds/FRAME_COUNT; }
+    public void cancelAttack() {
+        if(!attacking) return;
+        attacking=false; state=walking?"walk":"idle"; frame=0; frameTime=0; render();
+    }
 
     public MaleWarriorSprite(double size) {
         double width = size * FRAME_WIDTH / (double) FRAME_HEIGHT;
@@ -66,7 +76,7 @@ public final class MaleWarriorSprite extends Pane {
     }
 
     public void update(double dt) {
-        double speed = attacking ? .085 : walking ? .12 : Double.POSITIVE_INFINITY;
+        double speed = attacking ? attackFrameDuration : walking ? .12 : Double.POSITIVE_INFINITY;
         if (speed == Double.POSITIVE_INFINITY) return;
         frameTime += dt;
         while (frameTime >= speed) {
@@ -80,7 +90,7 @@ public final class MaleWarriorSprite extends Pane {
     }
 
     private void render() {
-        boolean movementFrame = walking;
+        boolean movementFrame = walking && !attacking;
         String pose = movementFrame ? "walk" : "idle";
         int poseFrame = movementFrame ? frame : 0;
         Image body = image("body_" + pose + ".png");
@@ -101,7 +111,7 @@ public final class MaleWarriorSprite extends Pane {
 
         String swordFolder = state.equals("attack") ? "ATTACK" : movementFrame ? "WALK" : "STAY";
         String swordPose = state.equals("attack") ? "attack" : pose;
-        overlayAll(result, image("SWORD_" + swordFolder + "/starter_sword_" + swordPose + ".png"), frame, true);
+        overlayAll(result, image("SWORD_" + swordFolder + "/"+swordName+"_" + swordPose + ".png"), frame, true);
         // Boots are the final composite layer. This prevents the body, trousers,
         // headwear or weapon layer from hiding their darker edge pixels.
         overlayChanged(result, bodyReference, image("BOOTS_" + (movementFrame ? "WALK" : "STAY") + "/boots_" + bootsName + "_" + pose + ".png"), poseFrame, movementFrame);

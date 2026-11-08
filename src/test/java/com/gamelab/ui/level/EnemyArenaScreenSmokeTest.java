@@ -70,11 +70,79 @@ class EnemyArenaScreenSmokeTest {
                         assertTrue(ImageIO.write(output,"png",Path.of("target/arena-preview/stage-"+(number+1)+(boss==1 ? "-boss" : "-regular")+".png").toFile()));
                     }
                 }
+                screen.stop();
+                verifyNewGameRoute();
             } catch (Throwable exception) { failure.set(exception); }
             finally { if (screen!=null) screen.stop(); done.countDown(); }
         });
         assertTrue(done.await(45,TimeUnit.SECONDS),"JavaFX rendering timed out");
         Platform.exit();
         if (failure.get()!=null) throw new AssertionError("Arena failed to render",failure.get());
+    }
+
+    private void verifyNewGameRoute() throws Exception {
+        var app=new com.gamelab.app.Main();var window=new javafx.stage.Stage();
+        try {
+            app.start(window);window.hide();
+            invoke(app,"onNewGame");
+            var creation=(com.gamelab.ui.character.CharacterCreationScreen)content(window);
+            creation.lookupAll(".text-field").stream().map(n -> (javafx.scene.control.TextField)n).findFirst().orElseThrow().setText("Campaign UI Hero");
+            invoke(creation,"createCharacter");
+            var tutorial=(TutorialLevelScreen)content(window);
+            ((Runnable)field(tutorial,"onComplete")).run();
+            var market=(com.gamelab.ui.shop.StageOneMarketScreen)content(window);
+            ((Runnable)field(market,"onContinue")).run();
+            var arena=(EnemyArenaScreen)content(window);
+            assertTrue(arena.lookupAll(".combo-box").isEmpty(),"New Game must not expose sandbox selectors");
+            assertTrue(arena.lookupAll(".check-box").isEmpty(),"New Game must not expose immortality or debug controls");
+            assertTrue(arena.lookupAll(".button").isEmpty(),"Active gameplay must not contain permanent menu buttons");
+            saveCampaignSnapshot(arena,"campaign-clean");
+            var run=(com.gamelab.application.arena.CampaignRun)field(app,"campaignRun");
+            assertEquals(1,run.activeStage());
+            assertSame(run.simulation(),field(arena,"simulation"));
+            run.simulation().hero().x=600;
+            Event.fireEvent(arena,new javafx.scene.input.KeyEvent(javafx.scene.input.KeyEvent.KEY_PRESSED,"","",javafx.scene.input.KeyCode.ESCAPE,false,false,false,false));
+            var hub=(com.gamelab.ui.menu.GameMenuScreen)content(window);
+            assertSame(field(app,"campaignWallet"),hub.getWallet());
+            hub.openInventory();assertInstanceOf(com.gamelab.ui.inventory.InventoryScreen.class,content(window));
+            Event.fireEvent(content(window),new javafx.scene.input.KeyEvent(javafx.scene.input.KeyEvent.KEY_PRESSED,"","",javafx.scene.input.KeyCode.ESCAPE,false,false,false,false));
+            hub=(com.gamelab.ui.menu.GameMenuScreen)content(window);
+            ((Runnable)field(hub,"back")).run();
+            assertSame(arena,content(window));assertEquals(600,run.simulation().hero().x);
+            arena.suspend();run.simulation().setInvincible(true);
+            for(int wave=1;wave<=3;wave++) {
+                if(wave==3) saveCampaignSnapshot(arena,"campaign-clean-boss");
+                run.simulation().fighters().forEach(f -> f.enemy.takeDamage(f.enemy.getMaxHealth()));
+                for(int tick=0;tick<105;tick++) run.simulation().update(.02,0,false);
+            }
+            run.simulation().hero().x=1880;run.simulation().update(.02,0,false);
+            invoke(app,"onCampaignStageCompleted");
+            assertInstanceOf(com.gamelab.ui.shop.StageOneMarketScreen.class,content(window));
+            assertEquals(1,run.completedStage());assertTrue(run.simulation().player().getLevel()>1);
+            market=(com.gamelab.ui.shop.StageOneMarketScreen)content(window);
+            ((Runnable)field(market,"onContinue")).run();assertEquals(2,run.activeStage());
+            assertInstanceOf(EnemyArenaScreen.class,content(window));
+        } finally {
+            Object campaign=field(app,"campaignArena");if(campaign instanceof EnemyArenaScreen arena)arena.stop();
+            Object audio=field(app,"campaignAudio");if(audio instanceof com.gamelab.ui.audio.CombatAudio sound)sound.close();window.close();
+        }
+    }
+    private void saveCampaignSnapshot(EnemyArenaScreen arena,String name) throws Exception {
+        invoke(arena,"render");
+        double sx=arena.getScaleX(),sy=arena.getScaleY();arena.setScaleX(1);arena.setScaleY(1);
+        arena.applyCss();arena.layout();var snapshot=arena.snapshot(null,null);
+        BufferedImage output=new BufferedImage((int)snapshot.getWidth(),(int)snapshot.getHeight(),BufferedImage.TYPE_INT_ARGB);
+        for(int y=0;y<output.getHeight();y++)for(int x=0;x<output.getWidth();x++)output.setRGB(x,y,snapshot.getPixelReader().getArgb(x,y));
+        assertTrue(ImageIO.write(output,"png",Path.of("target/arena-preview/"+name+".png").toFile()));
+        arena.setScaleX(sx);arena.setScaleY(sy);
+    }
+    private javafx.scene.layout.Pane content(javafx.stage.Stage window) {
+        return (javafx.scene.layout.Pane)((javafx.scene.layout.Pane)window.getScene().getRoot()).getChildren().get(0);
+    }
+    private Object field(Object object,String name) throws Exception {
+        var field=object.getClass().getDeclaredField(name);field.setAccessible(true);return field.get(object);
+    }
+    private void invoke(Object object,String name) throws Exception {
+        var method=object.getClass().getDeclaredMethod(name);method.setAccessible(true);method.invoke(object);
     }
 }

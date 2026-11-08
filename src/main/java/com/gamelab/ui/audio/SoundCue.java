@@ -11,7 +11,15 @@ public enum SoundCue {
     MYSTIC(.50,"mystic_0.wav","mystic_1.wav"),
     ETHEREAL(.45,"ghost_0.wav","ghost_1.wav"),
     FIRE(.40,"fire_0.wav","fire_1.wav"),
-    POISON(.45,"poison_0.wav","poison_1.wav");
+    POISON(.45,"poison_0.wav","poison_1.wav"),
+    PLAYER_HURT(.65,"player_hurt_0.wav","player_hurt_1.wav"),
+    PLAYER_DEATH(.65,"player_death.wav"),
+    JUMP(.18,"jump.wav"), DODGE(.28,"dodge.wav"), LAND(.16,"land.wav"), STEP(.09,"land.wav"),
+    SHOT(.22,"dodge.wav"), STONE_CAST(.28,"stone_cast.wav"), ICE_CAST(.28,"ice_cast.wav"),
+    ENEMY_DOWN(.22,"enemy_down.wav"), BOSS_DOWN(.40,"boss_down.wav"),
+    WAVE_START(.24,"wave_start.wav"), WAVE_CLEAR(.28,"wave_clear.wav"),
+    STAGE_CLEAR(.38,"stage_clear.wav"), LEVEL_UP(.32,"level_up.wav"),
+    HEAL(.30,"potion.wav"), SUMMON(.38,"summon.wav"), PHASE_CHANGE(.35,"phase_change.wav");
 
     private final double gain;
     private final List<String> files;

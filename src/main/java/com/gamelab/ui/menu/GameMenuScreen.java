@@ -39,7 +39,8 @@ public final class GameMenuScreen extends Pane {
     private final Inventory inventory;
     private final Consumer<Inventory> openInventory;
     private Consumer<Inventory> openShop = inventory -> { };
-    private final CoinWallet wallet = new CoinWallet(350);
+    private final CoinWallet wallet;
+    private MenuButton shopButton;
     private final List<MenuButton> buttons=new ArrayList<>();
     private final List<Label> dynamic=new ArrayList<>();
     private final MenuButton[] skillNodes=new MenuButton[5];
@@ -79,6 +80,11 @@ public final class GameMenuScreen extends Pane {
             Inventory inventory,
             Consumer<Inventory> openInventory
     ) {
+        this(player,back,inventory,openInventory,new CoinWallet(350));
+    }
+    public GameMenuScreen(PlayerCharacter player,Runnable back,Inventory inventory,
+                          Consumer<Inventory> openInventory,CoinWallet wallet) {
+        this.wallet=java.util.Objects.requireNonNull(wallet);
         this.player = player;
         this.back = back;
         this.inventory = inventory;
@@ -107,6 +113,7 @@ public final class GameMenuScreen extends Pane {
         for(int i=0;i<TABS.length;i++){
             final int tab=i;
             MenuButton b=button(TABS[i],420+i*190,28,175,54);
+            if(tab==5) shopButton=b;
             b.setOnAction(()->{
                 selectedTab=tab;
                 if(tab==2) openInventory();
@@ -189,5 +196,6 @@ public final class GameMenuScreen extends Pane {
     public CoinWallet getWallet(){return wallet;}
     public void refreshWallet(){currencyLabel.setText("◆  "+wallet.getBalance());}
     public void setOnShop(Consumer<Inventory> openShop){this.openShop=openShop==null?inventory->{ }:openShop;}
+    public void setShopAvailable(boolean available) { shopButton.setDisable(!available); }
     public void openInventory(){openInventory.accept(inventory);}
 }

@@ -92,8 +92,8 @@ public final class StageOneMarketScreen extends Pane {
         this.player = Objects.requireNonNull(player);
         this.inventory = Objects.requireNonNull(inventory);
         this.wallet = Objects.requireNonNull(wallet);
-        if (completedStage < 0 || completedStage > 1) {
-            throw new IllegalArgumentException("Completed stage must be 0 or 1");
+        if (completedStage < 0 || completedStage > 5) {
+            throw new IllegalArgumentException("Completed stage must be 0–5");
         }
         this.completedStage = completedStage;
         this.onBack = Objects.requireNonNull(onBack);
@@ -141,7 +141,7 @@ public final class StageOneMarketScreen extends Pane {
     private void buildHeader() {
         String heading = completedStage == 0
                 ? "ТРЕНИРОВКА ЗАВЕРШЕНА  //  ВЕЧЕРНИЙ РЫНОК"
-                : "ЭТАП 1 ЗАВЕРШЁН  //  ВЕЧЕРНИЙ РЫНОК";
+                : "ЭТАП "+completedStage+" ЗАВЕРШЁН  //  ВЕЧЕРНИЙ РЫНОК";
         Label title = text(heading, 31, "#f6cf7a");
         title.relocate(58, 30);
         title.setPrefSize(1050, 52);
@@ -219,7 +219,7 @@ public final class StageOneMarketScreen extends Pane {
         back.setOnAction(onBack);
 
         MenuButton next = new MenuButton(
-                completedStage == 0 ? "ПЕРЕЙТИ К ЭТАПУ 1" : "ПЕРЕЙТИ К ЭТАПУ 2",
+                completedStage==5 ? "К ТЁМНОМУ ЛОРДУ" : "ПЕРЕЙТИ К ЭТАПУ "+(completedStage+1),
                 420,
                 60
         );

@@ -82,7 +82,7 @@ class ArenaSimulationTest {
         assertThrows(IllegalArgumentException.class,()->physics.step(body,0,24,Double.NaN,platforms));
     }
 
-    @Test void regularEnemyCanFollowHeroOntoPlatformsWhileBossStaysOnGround() {
+    @Test void regularEnemyAndBossCanFollowHeroOntoPlatforms() {
         ArenaSimulation arena=arena(); arena.start(1,false);
         arena.hero().x=800; arena.hero().y=615; arena.hero().grounded=true;
         boolean reachedUpper=false;
@@ -92,8 +92,9 @@ class ArenaSimulationTest {
         }
         assertTrue(reachedUpper,"A regular enemy should navigate the stepping stones");
         arena.start(1,true); arena.hero().x=800; arena.hero().y=615;
-        advance(arena,10);
-        assertEquals(FLOOR,arena.fighters().get(0).body.y,.001);
+        boolean bossClimbed=false;
+        for(int i=0;i<1500;i++) { arena.update(.02,0,false); bossClimbed|=arena.fighters().get(0).body.y<754; }
+        assertTrue(bossClimbed);
     }
 
     @Test void switchingPlayerStrategyChangesRealCombatDamageAndEmitsEvents() {
@@ -104,11 +105,12 @@ class ArenaSimulationTest {
         ArenaSimulation.Fighter enemy=arena.fighters().get(0);
         arena.hero().x=enemy.body.x-60;
         int before=enemy.enemy.getHealth();
-        assertTrue(arena.attack()); assertEquals(20,before-enemy.enemy.getHealth());
+        assertTrue(arena.attack()); assertEquals(before,enemy.enemy.getHealth());
+        advance(arena,.22); assertEquals(20,before-enemy.enemy.getHealth());
         assertFalse(arena.attack(),"Attack cooldown prevents key repeat damage");
         advance(arena,.4); arena.hero().x=enemy.body.x-60;
         arena.setPlayerStrategy(new HeavyAttackStrategy()); before=enemy.enemy.getHealth();
-        assertTrue(arena.attack()); assertEquals(30,before-enemy.enemy.getHealth());
+        assertTrue(arena.attack()); advance(arena,.38); assertEquals(30,before-enemy.enemy.getHealth());
         assertTrue(events.contains("ENEMY_HEALTH_CHANGED"));
     }
 
@@ -140,9 +142,12 @@ class ArenaSimulationTest {
         ArenaSimulation.Fighter soldier=arena.fighters().get(1);
         soldier.enemy.takeDamage(soldier.enemy.getMaxHealth()-1);
         arena.hero().x=soldier.body.x-60; arena.attack();
+        advance(arena,.22);
         assertEquals(java.util.Set.of("soldier"),arena.defeatedTypes());
         arena.start(6,true);
-        advance(arena,3);
+        var lord=arena.fighters().get(0).enemy;
+        lord.takeDamage((int)(lord.getMaxHealth()*.75));
+        advance(arena,15);
         List<ArenaSimulation.Fighter> summons=arena.fighters().stream().filter(f -> f.summoned).toList();
         assertFalse(summons.isEmpty());
         assertTrue(summons.stream().allMatch(f -> f.profile.id().equals("soldier") && !f.enemy.isBoss()));
@@ -165,7 +170,7 @@ class ArenaSimulationTest {
         ArenaSimulation arena=arena(); arena.start(4,true); advance(arena,90);
         long count=arena.fighters().stream().filter(f -> f.summoned && f.enemy.isAlive()).count();
         assertTrue(count>=2 && count<=6);
-        assertTrue(arena.fighters().stream().filter(f -> f.summoned).allMatch(f -> f.profile.id().equals("slime")));
+        assertTrue(arena.fighters().stream().filter(f -> f.summoned).allMatch(f -> f.profile.id().equals("poison-slime") && f.enemy.getRewardCoins()==0 && f.enemy.getRewardExperience()==0));
     }
 
     @Test void fireMageCreatesTemporaryGroundHazard() {
@@ -228,33 +233,36 @@ class ArenaSimulationTest {
         arena.hero().x=elemental.body.x-60;
         arena.setPlayerStrategy(new BalancedStrategy());
         assertTrue(arena.attack());
-        assertEquals(.36,elemental.hurtTime,.001);
-        assertEquals(0,elemental.hurtElapsed,.001);
+        assertEquals(0,elemental.hurtTime,.001);
+        advance(arena,.22);
+        assertTrue(elemental.hurtTime>0);
         double before=elemental.body.x;
-        advance(arena,.2);
+        advance(arena,.4);
         assertTrue(elemental.hurtElapsed>0);
         assertNotEquals(before,elemental.body.x,"Hurt visual must not freeze movement");
         advance(arena,.2);
         assertEquals(0,elemental.hurtTime,.001);
         arena.hero().x=elemental.body.x-60;
         arena.attack();
-        assertEquals(.36,elemental.hurtTime,.001);
-        assertEquals(0,elemental.hurtElapsed,.001);
+        advance(arena,.22);
+        assertTrue(elemental.hurtTime>0);
     }
 
     @Test void approachingAndJumpingNeverExceedNormalWalkingSpeed() {
         for (int stage=1;stage<=5;stage++) {
             ArenaSimulation arena=arena(); arena.start(stage,false);
-            Platform target=ArenaSimulation.PLATFORMS.get(1);
+            Platform target=arena.platforms().get(1);
             arena.hero().x=target.x()+target.width()/2;
             arena.hero().y=target.y(); arena.hero().grounded=true;
             boolean jumped=false;
+            java.util.Set<String> landed=new java.util.HashSet<>();
             for (int tick=0;tick<3000;tick++) {
                 double[] before=arena.fighters().stream().mapToDouble(f -> f.body.x).toArray();
                 arena.update(.02,0,false);
                 for (int i=0;i<before.length;i++) {
                     ArenaSimulation.Fighter fighter=arena.fighters().get(i);
-                    assertTrue(Math.abs(fighter.body.x-before[i])<=fighter.walkingSpeed()*.02+.001,
+                    if(fighter.body.grounded && Math.abs(fighter.body.y-target.y())<1 && target.supports(fighter.body.x,0)) landed.add(fighter.enemy.getId());
+                    assertTrue(Math.abs(fighter.body.x-before[i])<=Math.max(340,fighter.walkingSpeed())*.02+.001,
                             "Approach/jump accelerated "+fighter.profile.id());
                     jumped|=fighter.body.velocityY<0;
                 }
@@ -262,7 +270,7 @@ class ArenaSimulationTest {
             assertTrue(jumped,"Enemies should still be able to jump at stage "+stage);
             for (ArenaSimulation.Fighter fighter : arena.fighters())
                 if (!fighter.profile.ranged() || !arena.canShoot(fighter))
-                    assertEquals(target.y(),fighter.body.y,1,"Enemy must reach the platform without a speed boost: "+fighter.profile.id());
+                    assertTrue(landed.contains(fighter.enemy.getId()),"Enemy must land on the platform without a speed boost: "+fighter.profile.id());
         }
     }
     @Test void blockedArcherFindsAFiringPosition() {

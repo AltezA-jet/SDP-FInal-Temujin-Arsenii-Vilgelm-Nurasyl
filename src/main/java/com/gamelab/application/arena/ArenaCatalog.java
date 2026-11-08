@@ -5,12 +5,12 @@ import java.util.List;
 
 /** Playable roster from All for final sdp/Тутор.txt; legacy campaign types remain compatible. */
 public final class ArenaCatalog {
-    public enum Attack { MELEE, SHOT, FIREBALL, POISON, STONE, ICE_FAN, ROLL, WITCH, CHARGE, FINAL }
+    public enum Attack { MELEE, SHOT, FIREBALL, POISON, STONE, ICE_FAN, ROLL, WITCH, CHARGE, FINAL, SUMMON, LEAP }
 
     public record Profile(String id, String name, int stage, EnemyType type, Attack attack,
                           double range, String spriteFolder, String spriteName, int frameWidth, int frameHeight) {
         public boolean boss() { return type.boss; }
-        public boolean ranged() { return attack == Attack.SHOT || attack == Attack.FIREBALL || attack == Attack.POISON; }
+        public boolean ranged() { return attack == Attack.SHOT || attack == Attack.FIREBALL || attack == Attack.POISON || attack == Attack.SUMMON; }
         public com.gamelab.application.audio.WeaponImpact.Surface hitSurface() {
             return switch (id) {
                 case "demon" -> com.gamelab.application.audio.WeaponImpact.Surface.DEMON;
@@ -33,20 +33,25 @@ public final class ArenaCatalog {
         profile("archer", "Лучница", 1, EnemyType.RUIN_ARCHER, Attack.SHOT, 580, "1 Этап/Archer", "ruin_archer", 64, 96),
         profile("soldier", "Солдат", 1, EnemyType.RUIN_SOLDIER, Attack.MELEE, 90, "1 Этап/Soldier", "swordsman", 64, 96),
         profile("guardian", "Рунный страж", 1, EnemyType.RUNE_GUARDIAN, Attack.STONE, 850, "1 Этап/Rune_Guardian(miniBoss)", "rune_guardian", 96, 128),
-        profile("ice-beast", "Ледяная собака", 2, EnemyType.ICE_CRAWLER, Attack.MELEE, 85, "2 Этап/ice_beast", "ice_beast", 96, 64),
+        profile("ice-beast", "Ледяной зверь", 2, EnemyType.ICE_CRAWLER, Attack.LEAP, 180, "2 Этап/ice_beast", "ice_beast", 96, 64),
         profile("elemental", "Ледяной элементаль", 2, EnemyType.ICE_ELEMENTAL, Attack.SHOT, 620, "2 Этап/ice_elemental", "ice_elemental", 64, 96),
         profile("ice-golem", "Ледяной голем", 2, EnemyType.FROST_GOLEM, Attack.ICE_FAN, 900, "2 Этап/ice_golem(miniBoss)", "ice_golem", 96, 128),
-        profile("demon", "Демон", 3, EnemyType.FIRE_IMP, Attack.MELEE, 100, "3 Этап/fire_demon", "fire_demon", 64, 96),
+        profile("demon", "Демон", 3, EnemyType.FIRE_IMP, Attack.LEAP, 180, "3 Этап/fire_demon", "fire_demon", 64, 96),
         profile("mage", "Огненный маг", 3, EnemyType.FIRE_MAGE, Attack.FIREBALL, 650, "3 Этап/fire_mag", "fire_mage", 64, 96),
-        profile("fire-golem", "Огненный голем", 3, EnemyType.INFERNO_GOLEM, Attack.ROLL, 1000, "", "", 96, 128),
-        profile("slime", "Слизень", 4, EnemyType.TOXIC_SLIME, Attack.MELEE, 75, "4 Этап/slime", "green_slime", 64, 64),
-        profile("doctor", "Вичдоктор", 4, EnemyType.POISON_SHAMAN, Attack.POISON, 620, "", "", 64, 96),
-        profile("witch", "Ведьма", 4, EnemyType.PLAGUE_QUEEN, Attack.WITCH, 850, "", "", 96, 128),
-        profile("ghost", "Призрак", 5, EnemyType.WRAITH, Attack.MELEE, 100, "", "", 64, 96),
-        profile("ghost-ranged", "Призрак-стрелок", 5, EnemyType.NECROMANCER, Attack.SHOT, 680, "", "", 64, 96),
-        profile("shadow-knight", "Теневой рыцарь", 5, EnemyType.SHADOW_KNIGHT, Attack.CHARGE, 1000, "", "", 96, 128),
-        profile("shadow-lord", "Повелитель теней", 6, EnemyType.SHADOW_LORD, Attack.FINAL, 1000, "", "", 96, 128)
+        profile("fire-golem", "Лавовый голем", 3, EnemyType.INFERNO_GOLEM, Attack.ROLL, 1400, "3 Этап/fire_golem(miniBoss)", "lava_golem", 96, 128),
+        profile("slime", "Зелёный слайм", 4, EnemyType.TOXIC_SLIME, Attack.LEAP, 180, "4 Этап/slime", "green_slime", 64, 64),
+        profile("doctor", "Чумной маг", 4, EnemyType.POISON_SHAMAN, Attack.POISON, 620, "4 Этап/plague_mage", "plague_mage", 64, 96),
+        profile("witch", "Чумная королева", 4, EnemyType.PLAGUE_QUEEN, Attack.WITCH, 850, "4 Этап/Queen(miniBoss)", "queen", 96, 128),
+        profile("ghost", "Тёмный призрак", 5, EnemyType.WRAITH, Attack.LEAP, 180, "5 Этап/Dark_ghost", "dark_ghost", 64, 96),
+        profile("ghost-ranged", "Тёмный маг", 5, EnemyType.NECROMANCER, Attack.SUMMON, 680, "5 Этап/dark_mage", "dark_mage", 64, 96),
+        profile("shadow-knight", "Тёмный король", 5, EnemyType.SHADOW_KNIGHT, Attack.CHARGE, 1200, "5 Этап/dark_king(miniBoss)", "dark_king", 96, 128),
+        profile("shadow-lord", "Тёмный Лорд", 6, EnemyType.SHADOW_LORD, Attack.FINAL, 1000, "Final_Boss(Lord)", "lord", 160, 192)
     );
+
+    public static final Profile SKELETON = profile("skeleton", "Скелет-мечник", 5, EnemyType.RUIN_SOLDIER,
+            Attack.MELEE, 90, "5 Этап/dark_mage", "skeleton", 64, 96);
+    public static final Profile POISON_SLIME = profile("poison-slime", "Ядовитый слайм", 4, EnemyType.TOXIC_SLIME,
+            Attack.LEAP, 180, "4 Этап/Queen(miniBoss)", "poison_slime", 64, 64);
 
     private ArenaCatalog() { }
     public static Profile byId(String id) {
