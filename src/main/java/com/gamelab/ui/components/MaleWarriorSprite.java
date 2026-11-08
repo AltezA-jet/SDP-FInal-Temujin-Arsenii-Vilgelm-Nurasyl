@@ -25,6 +25,11 @@ public final class MaleWarriorSprite extends Pane {
     private boolean attacking, walking;
     private String swordName="starter_sword";
     private double attackFrameDuration=.10;
+    private int footPadding;
+    public double getFootOffset() {
+        double height=prefHeight(-1);
+        return SpriteGrounding.footOffset(height,footPadding*height/FRAME_HEIGHT,getScaleY());
+    }
 
     public void setWeapon(String name) { swordName=name.toLowerCase(java.util.Locale.ROOT).replace(' ','_'); render(); }
     public void setAttackDuration(double seconds) { attackFrameDuration=seconds/FRAME_COUNT; }
@@ -115,6 +120,8 @@ public final class MaleWarriorSprite extends Pane {
         // Boots are the final composite layer. This prevents the body, trousers,
         // headwear or weapon layer from hiding their darker edge pixels.
         overlayChanged(result, bodyReference, image("BOOTS_" + (movementFrame ? "WALK" : "STAY") + "/boots_" + bootsName + "_" + pose + ".png"), poseFrame, movementFrame);
+        // Use the body's feet so a downward sword swing cannot move the character's ground anchor.
+        footPadding=SpriteGrounding.bottomPadding(bodyReference.getPixelReader(),movementFrame?poseFrame*FRAME_WIDTH:0,FRAME_WIDTH,FRAME_HEIGHT);
         sprite.setViewport(null); sprite.setImage(result);
     }
 

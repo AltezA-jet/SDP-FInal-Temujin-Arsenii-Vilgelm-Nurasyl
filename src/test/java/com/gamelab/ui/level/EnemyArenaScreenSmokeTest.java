@@ -97,6 +97,7 @@ class EnemyArenaScreenSmokeTest {
             assertTrue(arena.lookupAll(".check-box").isEmpty(),"New Game must not expose immortality or debug controls");
             assertTrue(arena.lookupAll(".button").isEmpty(),"Active gameplay must not contain permanent menu buttons");
             saveCampaignSnapshot(arena,"campaign-clean");
+            verifyHeroFeetStayOnTheSurface(arena);
             var run=(com.gamelab.application.arena.CampaignRun)field(app,"campaignRun");
             assertEquals(1,run.activeStage());
             assertSame(run.simulation(),field(arena,"simulation"));
@@ -135,6 +136,22 @@ class EnemyArenaScreenSmokeTest {
         for(int y=0;y<output.getHeight();y++)for(int x=0;x<output.getWidth();x++)output.setRGB(x,y,snapshot.getPixelReader().getArgb(x,y));
         assertTrue(ImageIO.write(output,"png",Path.of("target/arena-preview/"+name+".png").toFile()));
         arena.setScaleX(sx);arena.setScaleY(sy);
+    }
+    private void verifyHeroFeetStayOnTheSurface(EnemyArenaScreen arena) throws Exception {
+        var hero=(MaleWarriorSprite)arena.getChildren().stream().filter(n -> n instanceof MaleWarriorSprite).findFirst().orElseThrow();
+        var view=(javafx.scene.image.ImageView)hero.getChildren().get(0);
+        var simulation=(com.gamelab.application.arena.ArenaSimulation)field(arena,"simulation");
+        for(boolean crouch:java.util.List.of(false,true)) for(boolean walking:java.util.List.of(false,true)) for(int frame=0;frame<4;frame++) {
+            hero.setWalking(walking,crouch);hero.update(.12);invoke(arena,"render");
+            var image=view.getImage();int last=-1;
+            for(int y=0;y<image.getHeight();y++) for(int x=0;x<image.getWidth();x++)
+                if((image.getPixelReader().getArgb(x,y)>>>24)>=128) last=y;
+            var bounds=view.getBoundsInLocal();
+            var pointInHero=view.localToParent(bounds.getCenterX(),bounds.getMinY()+bounds.getHeight()*(last+1)/image.getHeight());
+            double visibleFeet=hero.localToParent(pointInHero).getY();
+            assertEquals(simulation.hero().y+6,visibleFeet,.01,"Hero must retain the 6px visual offset: crouch="+crouch+", walking="+walking+", frame="+frame);
+        }
+        hero.setWalking(false,false);invoke(arena,"render");
     }
     private javafx.scene.layout.Pane content(javafx.stage.Stage window) {
         return (javafx.scene.layout.Pane)((javafx.scene.layout.Pane)window.getScene().getRoot()).getChildren().get(0);

@@ -6,9 +6,13 @@ import static com.gamelab.application.arena.PlatformPhysics.Platform;
 /** Shared stage geometry and encounter data; independent of the sandbox UI and campaign saves. */
 public final class ArenaLayouts {
     public record Layout(String name, String folder, String background, String ground,
-                         String medium, String small, List<Platform> platforms) {
+                         String medium, String small, List<Platform> platforms, double platformCollisionInset) {
+        public Layout(String name,String folder,String background,String ground,String medium,String small,List<Platform> platforms) {
+            this(name,folder,background,ground,medium,small,platforms,0);
+        }
         public Layout { platforms=List.copyOf(platforms); }
         public String asset(String file) { return "Background+platform/"+folder+"/"+file; }
+        public double platformTextureY(Platform platform) { return platform.y()-platformCollisionInset; }
     }
     private static Platform p(double x,double y,double width) { return new Platform(x,y,width); }
     private static final List<Layout> ALL=List.of(
@@ -23,7 +27,7 @@ public final class ArenaLayouts {
             List.of(p(250,760,340),p(760,760,380),p(1330,760,340))),
         new Layout("Ядовитые болота","4_background_platform","stage4_background_1920x1080.png","Stage4_ground.png",
             "stage4_platform_medium.png","stage4_platform_small.png",
-            List.of(p(150,780,300),p(480,650,330),p(900,770,350),p(1310,650,340),p(1680,790,170))),
+            List.of(p(150,795,300),p(480,665,330),p(900,785,350),p(1310,665,340),p(1680,805,170)),15),
         new Layout("Тёмный замок","5_background_platform","fd0940a9-b040-47b9-8380-1019d21084a4.png",
             "44c1c0cb-7d39-46f6-9092-ee9d8a89a899.png","030ce0fe-4eda-4449-ac58-ca41b4f941c2.png","683454fa-d241-4f01-9a5f-5f8f5388a0b8.png",
             List.of(p(140,755,360),p(530,615,350),p(990,755,370),p(1380,615,380))),

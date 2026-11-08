@@ -13,6 +13,7 @@ import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.pattern.strategy.BalancedStrategy;
 import com.gamelab.pattern.strategy.HeavyAttackStrategy;
 import com.gamelab.ui.components.MaleWarriorSprite;
+import com.gamelab.ui.components.SpriteGrounding;
 import com.gamelab.ui.audio.*;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
@@ -33,6 +34,8 @@ import java.util.*;
 /** Shared arena renderer with separate campaign controls and sandbox tools. */
 public final class EnemyArenaScreen extends Pane {
     private static final double W=1920, H=1080;
+    private static final double HERO_DRAW_OFFSET_Y=6;
+    private static final double ENEMY_DRAW_OFFSET_Y=4;
     private static final String ROOT="/assets/enemies/";
     private final Canvas canvas=new Canvas(W,H);
     private final MaleWarriorSprite hero=new MaleWarriorSprite(MaleWarriorSprite.GAME_HEIGHT);
@@ -235,7 +238,7 @@ public final class EnemyArenaScreen extends Pane {
         requestFocus();
     }
     private void render() {
-        hero.relocate(Math.rint(simulation.hero().x-hero.prefWidth(-1)/2),Math.rint(simulation.hero().y-hero.prefHeight(-1)));
+        hero.relocate(Math.rint(simulation.hero().x-hero.prefWidth(-1)/2),simulation.hero().y-hero.prefHeight(-1)+hero.getFootOffset()+HERO_DRAW_OFFSET_Y);
         hero.setOpacity(simulation.dodging() ? .4 : 1);
         health.setText("HP "+simulation.player().getHealth()+" / "+simulation.player().getMaxHealth()
                 +(simulation.poisoned() ? "   ЯД" : "")+(simulation.slowed()?"   ЛЁД":"")+
@@ -285,7 +288,7 @@ public final class EnemyArenaScreen extends Pane {
         for (PlatformPhysics.Platform platform : simulation.platforms()) {
             Image texture=terrain(layout.asset(platform.width()<220?layout.small():layout.medium()));
             double height=platform.width()*texture.getHeight()/texture.getWidth();
-            g.drawImage(texture,platform.x(),platform.y(),platform.width(),height);
+            g.drawImage(texture,platform.x(),layout.platformTextureY(platform),platform.width(),height);
         }
         if(!campaign) {g.setFill(Color.web("#f2d08a")); g.setFont(Font.font(22)); g.fillText(layout.name(),30,220);}
         if(simulation.exitReady()) {
@@ -387,7 +390,13 @@ public final class EnemyArenaScreen extends Pane {
                 once ? Math.max(.08,(fighter.animationTime+Math.max(0,fighter.windup))/frames):.14;
             if(animation.equals("transform")) frameTime=ArenaSimulation.ROLL_WINDUP/2;
             int frame=hurt!=null ? Math.min(frames-1,(int)(fighter.hurtElapsed/.12)) : once?Math.min(frames-1,(int)(fighter.animationTime/frameTime)):(int)(fighter.animationTime/frameTime)%frames;
-            g.save(); g.translate(x,y);
+            boolean hovering=profile.id().equals("ghost")||profile.id().equals("elemental");
+            Image feetReference=profile.frameHeight()>=96 && animation.startsWith("attack") ? image(base+"_idle.png"):null;
+            int padding=feetReference==null
+                    ? SpriteGrounding.bottomPadding(sprite.getPixelReader(),frame*profile.frameWidth(),profile.frameWidth(),profile.frameHeight())
+                    : SpriteGrounding.bottomPadding(feetReference.getPixelReader(),0,profile.frameWidth(),profile.frameHeight());
+            double footOffset=hovering?0:padding*MaleWarriorSprite.GAME_SCALE;
+            g.save(); g.translate(x,y+footOffset+ENEMY_DRAW_OFFSET_Y);
             // Supplied enemy atlases face left; mirror toward the player on the right.
             if (!fighter.facingLeft) g.scale(-1,1);
             g.drawImage(sprite,frame*profile.frameWidth(),0,profile.frameWidth(),profile.frameHeight(),-width/2,-height,width,height);
