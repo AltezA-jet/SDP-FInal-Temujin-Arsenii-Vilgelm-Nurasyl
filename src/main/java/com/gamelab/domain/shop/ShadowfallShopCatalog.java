@@ -2,6 +2,8 @@ package com.gamelab.domain.shop;
 
 import com.gamelab.domain.item.Potion;
 import com.gamelab.domain.item.PotionType;
+import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.item.WeaponCatalog;
 import com.gamelab.domain.rune.Rune;
 import com.gamelab.domain.rune.RuneCatalog;
 import com.gamelab.pattern.observer.GameEventBus;
@@ -22,6 +24,12 @@ public final class ShadowfallShopCatalog {
         );
 
         Shop shop = new Shop(eventBus);
+
+        for (Weapon weapon : WeaponCatalog.createAll()) {
+            if (weapon.getUpgradeLevel() > 1) {
+                shop.addItem(weapon);
+            }
+        }
 
         for (Rune rune
                 : RuneCatalog.createShopRunes()) {

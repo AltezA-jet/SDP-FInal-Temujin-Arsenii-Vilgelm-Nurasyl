@@ -16,32 +16,36 @@ import java.util.Map;
 public final class MaleWarriorSprite extends Pane {
     private static final String ROOT = "/assets/male_warrior/";
     private static final int FRAME_WIDTH = 64, FRAME_HEIGHT = 96, FRAME_COUNT = 4;
-    /** All world sprites use the same number of screen units per source pixel. */
-    public static final double GAME_SCALE = 1.5;
-    public static final double GAME_HEIGHT = FRAME_HEIGHT * GAME_SCALE;
     private final ImageView sprite = new ImageView();
     private final Map<String, Image> images = new HashMap<>();
-    private String hairName = "black", outfitName = "blue", state = "idle";
+    private String hairName = "black", shirtName = "blue", pantsName = "blue", bootsName = "blue", state = "idle";
     private int headwearIndex = -1, frame;
     private double frameTime;
     private boolean attacking, walking;
 
     public MaleWarriorSprite(double size) {
-        double width = size * FRAME_WIDTH / FRAME_HEIGHT;
+        double width = size * FRAME_WIDTH / (double) FRAME_HEIGHT;
         setPrefSize(width, size); setMinSize(width, size); setMaxSize(width, size);
         sprite.setPreserveRatio(true); sprite.setSmooth(false);
         sprite.fitWidthProperty().bind(widthProperty()); sprite.fitHeightProperty().bind(heightProperty());
         sprite.setMouseTransparent(true); getChildren().add(sprite);
-        setConfiguration(0, 0, -1);
+        setConfiguration(0, 0, 0, 0, -1);
     }
 
     public void setConfiguration(int hairIndex, int outfitIndex) { setConfiguration(hairIndex, outfitIndex, headwearIndex); }
 
     public void setConfiguration(int hairIndex, int outfitIndex, int headwearIndex) {
+        setConfiguration(hairIndex, outfitIndex, outfitIndex, outfitIndex, headwearIndex);
+    }
+
+    public void setConfiguration(int hairIndex, int shirtIndex, int pantsIndex,
+                                 int bootsIndex, int headwearIndex) {
         String[] hairs = {"black", "brown", "red", "blond", "blue", "purple", "pink"};
         String[] outfits = {"blue", "brown", "green", "grey", "purple"};
         hairName = hairs[Math.max(0, Math.min(hairs.length - 1, hairIndex))];
-        outfitName = outfits[Math.max(0, Math.min(outfits.length - 1, outfitIndex))];
+        shirtName = outfits[Math.max(0, Math.min(outfits.length - 1, shirtIndex))];
+        pantsName = outfits[Math.max(0, Math.min(outfits.length - 1, pantsIndex))];
+        bootsName = outfits[Math.max(0, Math.min(outfits.length - 1, bootsIndex))];
         this.headwearIndex = Math.max(-1, Math.min(4, headwearIndex));
         state = "idle"; walking = false; attacking = false; frame = 0; frameTime = 0; render();
     }
@@ -84,11 +88,9 @@ public final class MaleWarriorSprite extends Pane {
         Image bodyReference = image("body_" + pose + ".png");
 
         // All clothing files contain the complete silhouette. Only their changed pixels are applied.
-        overlayChanged(result, bodyReference, image("PANTS_" + (movementFrame ? "WALK" : "STAY") + "/pants_" + outfitName + "_" + pose + ".png"), poseFrame, movementFrame);
-        overlayChanged(result, bodyReference, image("SHIRT_" + (movementFrame ? "WALK" : "STAY") + "/shirt_" + outfitName + "_" + pose + ".png"), poseFrame, movementFrame);
+        overlayChanged(result, bodyReference, image("PANTS_" + (movementFrame ? "WALK" : "STAY") + "/pants_" + pantsName + "_" + pose + ".png"), poseFrame, movementFrame);
+        overlayChanged(result, bodyReference, image("SHIRT_" + (movementFrame ? "WALK" : "STAY") + "/shirt_" + shirtName + "_" + pose + ".png"), poseFrame, movementFrame);
         overlayChanged(result, bodyReference, image("HAIR_" + (movementFrame ? "WALK" : "STAY") + "/hair_" + hairName + "_" + pose + ".png"), poseFrame, movementFrame);
-        // Boots are applied last so they remain above the body and trousers in every frame.
-        overlayChanged(result, bodyReference, image("BOOTS_" + (movementFrame ? "WALK" : "STAY") + "/boots_" + outfitName + "_" + pose + ".png"), poseFrame, movementFrame);
         if (headwearIndex >= 0) {
             String[] hats = {"blue", "brown", "green", "grey", "purple"};
             String hat = hats[headwearIndex];
@@ -100,6 +102,9 @@ public final class MaleWarriorSprite extends Pane {
         String swordFolder = state.equals("attack") ? "ATTACK" : movementFrame ? "WALK" : "STAY";
         String swordPose = state.equals("attack") ? "attack" : pose;
         overlayAll(result, image("SWORD_" + swordFolder + "/starter_sword_" + swordPose + ".png"), frame, true);
+        // Boots are the final composite layer. This prevents the body, trousers,
+        // headwear or weapon layer from hiding their darker edge pixels.
+        overlayChanged(result, bodyReference, image("BOOTS_" + (movementFrame ? "WALK" : "STAY") + "/boots_" + bootsName + "_" + pose + ".png"), poseFrame, movementFrame);
         sprite.setViewport(null); sprite.setImage(result);
     }
 
@@ -116,7 +121,7 @@ public final class MaleWarriorSprite extends Pane {
         int offset = sheet ? index * FRAME_WIDTH : 0;
         for (int y = 0; y < FRAME_HEIGHT; y++) for (int x = 0; x < FRAME_WIDTH; x++) {
             int a = src.getArgb(offset + x, y); int b = ref.getArgb(offset + x, y);
-            if ((a >>> 24) != 0 && colorDistance(a, b) > 10) out.setArgb(x, y, a);
+            if ((a >>> 24) != 0 && colorDistance(a, b) > 2) out.setArgb(x, y, a);
         }
     }
 

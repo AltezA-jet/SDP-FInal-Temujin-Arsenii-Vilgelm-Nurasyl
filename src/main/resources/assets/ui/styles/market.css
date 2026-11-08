@@ -1,0 +1,41 @@
+.market-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+}
+
+.market-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.market-scroll .corner {
+    -fx-background-color: transparent;
+}
+
+.market-scroll .scroll-bar:vertical {
+    -fx-background-color: #100b18;
+    -fx-pref-width: 14px;
+    -fx-border-color: #5f452f;
+    -fx-border-width: 1px;
+}
+
+.market-scroll .scroll-bar:vertical .track {
+    -fx-background-color: #100b18;
+    -fx-background-radius: 2px;
+}
+
+.market-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: linear-gradient(to right, #76502d, #bc8141, #76502d);
+    -fx-background-radius: 2px;
+}
+
+.market-scroll .scroll-bar .increment-button,
+.market-scroll .scroll-bar .decrement-button {
+    -fx-background-color: #181020;
+    -fx-padding: 4px;
+}
+
+.market-scroll .scroll-bar .increment-arrow,
+.market-scroll .scroll-bar .decrement-arrow {
+    -fx-background-color: #d6a65e;
+}

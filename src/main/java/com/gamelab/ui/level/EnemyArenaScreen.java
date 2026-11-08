@@ -249,7 +249,7 @@ public final class EnemyArenaScreen extends Pane {
 
     private void drawProjectile(GraphicsContext g,ArenaSimulation.Projectile shot) {
         String path=switch (shot.source) {
-            case "archer" -> "1 Этап/Archer/Arrow.png";
+            case "archer" -> "1 Этап/Archer/arrow.png";
             case "guardian" -> "1 Этап/Rune_Guardian(miniBoss)/rune_guardian_projectile.png";
             case "elemental" -> "2 Этап/ice_elemental/ice_snowball.png";
             case "ice-golem" -> "2 Этап/ice_golem(miniBoss)/ice_golem_projectile_"+(shot.radius>20 ? "big" : "small")+".png";
