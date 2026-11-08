@@ -4,6 +4,8 @@ import com.gamelab.domain.Item;
 import com.gamelab.domain.PlayerCharacter;
 import com.gamelab.domain.economy.CoinWallet;
 import com.gamelab.domain.inventory.Inventory;
+import com.gamelab.domain.item.Potion;
+import com.gamelab.domain.item.Weapon;
 import com.gamelab.domain.rune.Rune;
 import com.gamelab.domain.shop.PurchaseResult;
 import com.gamelab.domain.shop.ShadowfallShopCatalog;
@@ -20,8 +22,8 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -47,17 +49,27 @@ public final class StageOneMarketScreen extends Pane {
                     + "-fx-background-radius: 7;"
                     + "-fx-border-radius: 7;";
 
+    private enum ShopFilter {
+        ALL,
+        WEAPONS,
+        RUNES,
+        CONSUMABLES
+    }
+
     private final PlayerCharacter player;
     private final Inventory inventory;
     private final CoinWallet wallet;
     private final Shop shop;
+    private final int completedStage;
     private final Runnable onBack;
     private final Runnable onContinue;
-    private final TilePane shopItems = new TilePane();
+    private final GridPane shopItems = new GridPane();
     private final GridPane inventoryGrid = new GridPane();
     private final Label coinBalance = text("", 25, "#ffe29b");
     private final Label inventoryCount = text("", 18, "#d7c1a1");
-    private final Label status = text("Выберите товар у купца", 17, "#f3d69b");
+    private final Label status = text("ВЫБЕРИТЕ ТОВАР У КУПЦА", 17, "#f3d69b");
+    private final MenuButton[] shopFilterButtons = new MenuButton[4];
+    private ShopFilter shopFilter = ShopFilter.ALL;
 
     public StageOneMarketScreen(
             PlayerCharacter player,
@@ -66,12 +78,30 @@ public final class StageOneMarketScreen extends Pane {
             Runnable onBack,
             Runnable onContinue
     ) {
+        this(player, inventory, wallet, 0, onBack, onContinue);
+    }
+
+    public StageOneMarketScreen(
+            PlayerCharacter player,
+            Inventory inventory,
+            CoinWallet wallet,
+            int completedStage,
+            Runnable onBack,
+            Runnable onContinue
+    ) {
         this.player = Objects.requireNonNull(player);
         this.inventory = Objects.requireNonNull(inventory);
         this.wallet = Objects.requireNonNull(wallet);
+        if (completedStage < 0 || completedStage > 1) {
+            throw new IllegalArgumentException("Completed stage must be 0 or 1");
+        }
+        this.completedStage = completedStage;
         this.onBack = Objects.requireNonNull(onBack);
         this.onContinue = Objects.requireNonNull(onContinue);
         this.shop = ShadowfallShopCatalog.createDefaultShop(new GameEventBus());
+
+        URL stylesheet = StageOneMarketScreen.class.getResource("/assets/ui/styles/market.css");
+        if (stylesheet != null) getStylesheets().add(stylesheet.toExternalForm());
 
         setPrefSize(W, H);
         setMinSize(W, H);
@@ -109,7 +139,10 @@ public final class StageOneMarketScreen extends Pane {
     }
 
     private void buildHeader() {
-        Label title = text("ЭТАП 1 ЗАВЕРШЁН  //  ВЕЧЕРНИЙ РЫНОК", 31, "#f6cf7a");
+        String heading = completedStage == 0
+                ? "ТРЕНИРОВКА ЗАВЕРШЕНА  //  ВЕЧЕРНИЙ РЫНОК"
+                : "ЭТАП 1 ЗАВЕРШЁН  //  ВЕЧЕРНИЙ РЫНОК";
+        Label title = text(heading, 31, "#f6cf7a");
         title.relocate(58, 30);
         title.setPrefSize(1050, 52);
 
@@ -123,19 +156,43 @@ public final class StageOneMarketScreen extends Pane {
     private void buildShop() {
         VBox panel = panel(48, 142, 650, 800);
         Label title = text("МАГАЗИН КУПЦА", 28, "#f6cf7a");
-        Label subtitle = text("Покупки сразу попадают в инвентарь", 15, "#cbb99f");
+        Label subtitle = text("Выберите категорию и товар", 14, "#cbb99f");
 
-        shopItems.setPrefColumns(2);
+        HBox filters = new HBox(8);
+        filters.setAlignment(Pos.CENTER);
+        String[] names = {"ВСЕ", "ОРУЖИЕ", "РУНЫ", "РАСХОДНИКИ"};
+        ShopFilter[] values = ShopFilter.values();
+
+        for (int index = 0; index < values.length; index++) {
+            int currentIndex = index;
+            MenuButton filterButton = new MenuButton(names[index], 138, 44);
+            filterButton.setOnAction(() -> {
+                shopFilter = values[currentIndex];
+                refreshShopFilters();
+                renderShop();
+            });
+            shopFilterButtons[index] = filterButton;
+            filters.getChildren().add(filterButton);
+        }
+
         shopItems.setHgap(14);
         shopItems.setVgap(14);
         shopItems.setPadding(new Insets(12));
+        shopItems.setAlignment(Pos.TOP_CENTER);
+        shopItems.setMinWidth(570);
+        shopItems.setPrefWidth(570);
+        shopItems.setMaxWidth(570);
 
         ScrollPane scroll = new ScrollPane(shopItems);
         scroll.setFitToWidth(true);
-        scroll.setPrefViewportHeight(650);
+        scroll.setPrefViewportHeight(560);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.getStyleClass().add("market-scroll");
         scroll.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
         VBox.setMargin(scroll, new Insets(8, 0, 0, 0));
-        panel.getChildren().addAll(title, subtitle, scroll);
+        panel.getChildren().addAll(title, subtitle, filters, scroll);
+        refreshShopFilters();
     }
 
     private void buildInventory() {
@@ -152,15 +209,21 @@ public final class StageOneMarketScreen extends Pane {
     }
 
     private void buildFooter() {
-        status.relocate(58, 1008);
-        status.setPrefSize(760, 40);
+        status.relocate(500, 996);
+        status.setPrefSize(880, 62);
+        status.setAlignment(Pos.CENTER);
+        status.setWrapText(true);
 
         MenuButton back = new MenuButton("НАЗАД", 240, 60);
-        back.relocate(1040, 997);
+        back.relocate(60, 997);
         back.setOnAction(onBack);
 
-        MenuButton next = new MenuButton("ПРОДОЛЖИТЬ К ЭТАПУ 2", 420, 60);
-        next.relocate(1400, 997);
+        MenuButton next = new MenuButton(
+                completedStage == 0 ? "ПЕРЕЙТИ К ЭТАПУ 1" : "ПЕРЕЙТИ К ЭТАПУ 2",
+                420,
+                60
+        );
+        next.relocate(1430, 997);
         next.setOnAction(onContinue);
         getChildren().addAll(status, back, next);
     }
@@ -174,9 +237,14 @@ public final class StageOneMarketScreen extends Pane {
 
     private void renderShop() {
         shopItems.getChildren().clear();
+        int visibleIndex = 0;
         for (Item item : shop.getCatalog()) {
-            boolean alreadyOwned = item instanceof Rune rune
-                    && inventory.hasAcquiredRuneType(rune.getRuneType());
+            if (!matchesShopFilter(item)) continue;
+            boolean alreadyOwned =
+                    (item instanceof Rune rune
+                            && inventory.hasAcquiredRuneType(rune.getRuneType()))
+                            || (item instanceof Weapon weapon
+                            && inventory.hasAcquiredWeaponLevel(weapon.getUpgradeLevel()));
             ImageView icon = image(ItemSpriteResolver.resolve(item), 54);
             Label name = text(item.getName(), 16, "#fff0c9");
             name.setWrapText(true);
@@ -195,7 +263,9 @@ public final class StageOneMarketScreen extends Pane {
             VBox card = new VBox(5, icon, name, description, price);
             card.setAlignment(Pos.CENTER);
             card.setPadding(new Insets(10));
-            card.setPrefSize(270, 176);
+            card.setPrefSize(260, 176);
+            card.setMinSize(260, 176);
+            card.setMaxSize(260, 176);
             card.setStyle(ITEM_STYLE);
             card.setOpacity(alreadyOwned ? .72 : 1);
             card.setCursor(alreadyOwned ? javafx.scene.Cursor.DEFAULT : javafx.scene.Cursor.HAND);
@@ -204,7 +274,24 @@ public final class StageOneMarketScreen extends Pane {
                 card.setOnMouseExited(event -> card.setStyle(ITEM_STYLE));
                 card.setOnMouseClicked(event -> purchase(item));
             }
-            shopItems.getChildren().add(card);
+            shopItems.add(card, visibleIndex % 2, visibleIndex / 2);
+            visibleIndex++;
+        }
+    }
+
+    private boolean matchesShopFilter(Item item) {
+        return switch (shopFilter) {
+            case ALL -> true;
+            case WEAPONS -> item instanceof Weapon;
+            case RUNES -> item instanceof Rune;
+            case CONSUMABLES -> item instanceof Potion;
+        };
+    }
+
+    private void refreshShopFilters() {
+        ShopFilter[] values = ShopFilter.values();
+        for (int index = 0; index < shopFilterButtons.length; index++) {
+            shopFilterButtons[index].setSelected(shopFilter == values[index]);
         }
     }
 

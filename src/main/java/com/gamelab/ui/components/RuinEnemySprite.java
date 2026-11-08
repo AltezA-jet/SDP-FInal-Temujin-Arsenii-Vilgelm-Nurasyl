@@ -2,10 +2,12 @@ package com.gamelab.ui.components;
 
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
 
-/** Temporary pixel-art actors for stage one. Replace their drawing with sprite sheets later. */
+import java.net.URL;
+
+/** Pixel-art actor used by the first campaign stage. */
 public final class RuinEnemySprite extends Pane {
 
     public enum Kind {
@@ -14,21 +16,57 @@ public final class RuinEnemySprite extends Pane {
         GUARDIAN
     }
 
+    private static final double WALK_FRAME_TIME = .13;
+    // Attack frames stay visible long enough to read clearly at 60 FPS.
+    private static final double ATTACK_FRAME_TIME = .16;
+    private static final double HURT_FRAME_TIME = .10;
+
     private final Kind kind;
+    private final int frameWidth;
+    private final int frameHeight;
+    private final double actorWidth;
+    private final double actorHeight;
     private final Canvas canvas;
-    private double time;
+    private final Image idle;
+    private final Image walk;
+    private final Image meleeAttack;
+    private final Image rangedAttack;
+    private final Image hurt;
+
+    private double animationTime;
     private double attackTime;
+    private double hurtTime;
     private boolean walking;
+    private boolean rangedAttackActive;
 
     public RuinEnemySprite(Kind kind) {
         this.kind = kind;
-        double width = kind == Kind.GUARDIAN ? 190 : 120;
-        double height = kind == Kind.GUARDIAN ? 220 : 150;
-        canvas = new Canvas(width, height);
+        frameWidth = kind == Kind.GUARDIAN ? 96 : 64;
+        frameHeight = kind == Kind.GUARDIAN ? 128 : 96;
+        double scale = kind == Kind.GUARDIAN ? 1.72 : 1.75;
+        actorWidth = frameWidth * scale;
+        actorHeight = frameHeight * scale;
+
+        String root = switch (kind) {
+            case SOLDIER -> "/assets/stage1/enemies/swordsman/swordsman";
+            case ARCHER -> "/assets/stage1/enemies/archer/ruin_archer";
+            case GUARDIAN -> "/assets/stage1/enemies/miniboss/rune_guardian";
+        };
+
+        idle = load(root + "_idle.png");
+        walk = load(root + "_walk.png");
+        meleeAttack = load(root + (kind == Kind.GUARDIAN ? "_attack_melee.png" : "_attack.png"));
+        rangedAttack = kind == Kind.GUARDIAN
+                ? load(root + "_attack_ranged.png")
+                : meleeAttack;
+        hurt = kind == Kind.ARCHER ? load(root + "_hurt.png") : null;
+
+        canvas = new Canvas(actorWidth, actorHeight);
         canvas.setMouseTransparent(true);
-        setPrefSize(width, height);
-        setMinSize(width, height);
-        setMaxSize(width, height);
+        setPrefSize(actorWidth, actorHeight);
+        setMinSize(actorWidth, actorHeight);
+        setMaxSize(actorWidth, actorHeight);
+        setMouseTransparent(true);
         getChildren().add(canvas);
         draw();
     }
@@ -37,112 +75,87 @@ public final class RuinEnemySprite extends Pane {
         this.walking = walking;
     }
 
+    /** Supplied atlases face left, so only right-facing actors are mirrored. */
     public void setFacingLeft(boolean facingLeft) {
-        setScaleX(facingLeft ? -1 : 1);
+        setScaleX(facingLeft ? 1 : -1);
     }
 
     public void setAttacking() {
-        attackTime = .24;
+        setAttacking(kind == Kind.ARCHER);
+    }
+
+    public void setAttacking(boolean ranged) {
+        rangedAttackActive = ranged;
+        attackTime = ATTACK_FRAME_TIME * 4;
+    }
+
+    public void setHurt() {
+        hurtTime = hurt == null ? .18 : HURT_FRAME_TIME * frameCount(hurt);
     }
 
     public void update(double dt) {
-        time += dt;
+        animationTime += dt;
         attackTime = Math.max(0, attackTime - dt);
+        hurtTime = Math.max(0, hurtTime - dt);
         draw();
     }
 
     public double getActorWidth() {
-        return canvas.getWidth();
+        return actorWidth;
     }
 
     public double getActorHeight() {
-        return canvas.getHeight();
+        return actorHeight;
     }
 
     private void draw() {
-        GraphicsContext g = canvas.getGraphicsContext2D();
-        g.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-        g.setImageSmoothing(false);
-        int step = walking && ((int) (time / .14) & 1) == 1 ? 6 : 0;
-        double flash = attackTime > 0 ? 1 : 0;
+        GraphicsContext graphics = canvas.getGraphicsContext2D();
+        graphics.clearRect(0, 0, actorWidth, actorHeight);
+        graphics.setImageSmoothing(false);
 
-        switch (kind) {
-            case SOLDIER -> drawSoldier(g, step, flash);
-            case ARCHER -> drawArcher(g, step, flash);
-            case GUARDIAN -> drawGuardian(g, step, flash);
+        Image sheet;
+        int frame;
+
+        if (hurtTime > 0 && hurt != null) {
+            sheet = hurt;
+            frame = elapsedFrame(hurt, hurtTime, HURT_FRAME_TIME);
+        } else if (attackTime > 0) {
+            sheet = rangedAttackActive ? rangedAttack : meleeAttack;
+            frame = elapsedFrame(sheet, attackTime, ATTACK_FRAME_TIME);
+        } else if (walking) {
+            sheet = walk;
+            frame = (int) (animationTime / WALK_FRAME_TIME) % frameCount(sheet);
+        } else {
+            sheet = idle;
+            frame = 0;
         }
+
+        graphics.drawImage(
+                sheet,
+                frame * frameWidth,
+                0,
+                frameWidth,
+                frameHeight,
+                0,
+                0,
+                actorWidth,
+                actorHeight
+        );
     }
 
-    private void drawSoldier(GraphicsContext g, int step, double flash) {
-        g.setFill(Color.web("#18131d"));
-        g.fillRect(31, 39, 58, 70);
-        g.setFill(Color.web(flash > 0 ? "#b88655" : "#665a67"));
-        g.fillRect(39, 25, 44, 38);
-        g.fillRect(27, 59, 66, 49);
-        g.setFill(Color.web("#332b38"));
-        g.fillRect(34, 13, 54, 24);
-        g.fillRect(29, 28, 10, 26);
-        g.setFill(Color.web("#df9b3d"));
-        g.fillRect(38, 34, 31, 5);
-        g.fillRect(53, 73, 9, 25);
-        g.setFill(Color.web("#8a5d32"));
-        g.fillRect(17, 70, 13, 52);
-        g.setFill(Color.web("#c7b7a4"));
-        g.fillRect(13, 38, 6, 75);
-        g.fillRect(8, 35, 16, 7);
-        g.setFill(Color.web("#443a49"));
-        g.fillRect(35, 104, 20, 36 + step);
-        g.fillRect(68, 104, 20, 42 - step);
-        g.setFill(Color.web("#211a27"));
-        g.fillRect(28, 137 + step, 32, 10);
-        g.fillRect(63, 139 - step, 33, 10);
+    private int elapsedFrame(Image sheet, double remainingTime, double frameTime) {
+        int frames = frameCount(sheet);
+        double duration = frames * frameTime;
+        return Math.min(frames - 1, Math.max(0, (int) ((duration - remainingTime) / frameTime)));
     }
 
-    private void drawArcher(GraphicsContext g, int step, double flash) {
-        g.setFill(Color.web("#211726"));
-        g.fillRect(34, 38, 54, 75);
-        g.setFill(Color.web(flash > 0 ? "#8d754d" : "#504358"));
-        g.fillRect(41, 26, 40, 38);
-        g.setFill(Color.web("#2d2134"));
-        g.fillPolygon(new double[]{27, 61, 94}, new double[]{48, 4, 48}, 3);
-        g.fillRect(27, 43, 67, 65);
-        g.setFill(Color.web("#a8c56d"));
-        g.fillRect(48, 35, 24, 5);
-        g.setFill(Color.web("#8d6338"));
-        g.setLineWidth(5);
-        g.strokeArc(5, 38, 52, 91, -80, 160, javafx.scene.shape.ArcType.OPEN);
-        g.setStroke(Color.web("#d2c3a3"));
-        g.setLineWidth(2);
-        g.strokeLine(31, 43, 31, 125);
-        g.setFill(Color.web("#3e3045"));
-        g.fillRect(38, 106, 19, 34 + step);
-        g.fillRect(68, 106, 19, 40 - step);
-        g.setFill(Color.web("#1b151f"));
-        g.fillRect(31, 137 + step, 31, 10);
-        g.fillRect(63, 139 - step, 31, 10);
+    private int frameCount(Image sheet) {
+        return Math.max(1, (int) Math.round(sheet.getWidth() / frameWidth));
     }
 
-    private void drawGuardian(GraphicsContext g, int step, double flash) {
-        g.setFill(Color.web("#17121b"));
-        g.fillRect(31, 54, 128, 105);
-        g.setFill(Color.web(flash > 0 ? "#94725a" : "#51464f"));
-        g.fillRect(58, 20, 76, 57);
-        g.fillRect(39, 70, 112, 82);
-        g.fillRect(8, 78, 42, 102);
-        g.fillRect(142, 78, 40, 102);
-        g.setFill(Color.web("#2d2631"));
-        g.fillRect(49, 6, 92, 30);
-        g.fillRect(24, 61, 42, 32);
-        g.fillRect(126, 61, 42, 32);
-        g.setFill(Color.web("#ff9c38"));
-        g.fillRect(69, 45, 54, 7);
-        g.fillRect(91, 84, 10, 52);
-        g.fillRect(72, 103, 48, 9);
-        g.setFill(Color.web("#463a45"));
-        g.fillRect(47, 151, 38, 55 + step);
-        g.fillRect(108, 151, 38, 61 - step);
-        g.setFill(Color.web("#211a25"));
-        g.fillRect(34, 198 + step, 57, 18);
-        g.fillRect(101, 202 - step, 58, 18);
+    private static Image load(String path) {
+        URL resource = RuinEnemySprite.class.getResource(path);
+        if (resource == null) throw new IllegalStateException("Missing stage-one sprite: " + path);
+        return new Image(resource.toExternalForm());
     }
 }

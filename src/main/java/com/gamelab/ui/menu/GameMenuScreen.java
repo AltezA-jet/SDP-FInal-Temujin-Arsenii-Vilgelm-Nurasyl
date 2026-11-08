@@ -16,6 +16,8 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Polygon;
 import javafx.scene.text.TextAlignment;
+import com.gamelab.domain.inventory.Inventory;
+import java.util.function.Consumer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +36,7 @@ public final class GameMenuScreen extends Pane {
     private static final String[] TABS={"CHARACTER","SKILL TREE","INVENTORY","STATS","SETTINGS","SHOP"};
     private final PlayerCharacter player;
     private final Runnable back;
-    private final Inventory inventory = new Inventory(16);
+    private final Inventory inventory;
     private final Consumer<Inventory> openInventory;
     private Consumer<Inventory> openShop = inventory -> { };
     private final CoinWallet wallet = new CoinWallet(350);
@@ -46,13 +48,51 @@ public final class GameMenuScreen extends Pane {
     private Label detailTitle,detailBody,points,feedback;
     private Label currencyLabel;
 
-    public GameMenuScreen(PlayerCharacter player,Runnable back){
-        this(player, back, inventory -> { });
+    public GameMenuScreen(
+            PlayerCharacter player,
+            Runnable back
+    ) {
+        this(
+                player,
+                back,
+                new Inventory(16),
+                inventory -> { }
+        );
     }
-    public GameMenuScreen(PlayerCharacter player,Runnable back,Consumer<Inventory> openInventory){
-        this.player=player;this.back=back;this.openInventory=openInventory;
-        setPrefSize(W,H);setMinSize(W,H);setMaxSize(W,H);
-        drawBackground();drawHeader();drawPanels();drawTree();drawFooter();
+
+    public GameMenuScreen(
+            PlayerCharacter player,
+            Runnable back,
+            Consumer<Inventory> openInventory
+    ) {
+        this(
+                player,
+                back,
+                new Inventory(16),
+                openInventory
+        );
+    }
+
+    public GameMenuScreen(
+            PlayerCharacter player,
+            Runnable back,
+            Inventory inventory,
+            Consumer<Inventory> openInventory
+    ) {
+        this.player = player;
+        this.back = back;
+        this.inventory = inventory;
+        this.openInventory = openInventory;
+
+        setPrefSize(W, H);
+        setMinSize(W, H);
+        setMaxSize(W, H);
+
+        drawBackground();
+        drawHeader();
+        drawPanels();
+        drawTree();
+        drawFooter();
         refresh();
     }
     private void drawBackground(){

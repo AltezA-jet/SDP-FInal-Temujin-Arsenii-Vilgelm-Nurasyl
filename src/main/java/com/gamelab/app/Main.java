@@ -1,6 +1,5 @@
 package com.gamelab.app;
 
-import com.gamelab.ui.game.GameScreen;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
@@ -11,13 +10,21 @@ import javafx.scene.paint.Color;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import com.gamelab.domain.PlayerCharacter;
+import com.gamelab.application.RuneService;
+import com.gamelab.domain.economy.CoinWallet;
+import com.gamelab.domain.inventory.Inventory;
+import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.item.WeaponCatalog;
+import com.gamelab.domain.rune.RuneLoadout;
+import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.ui.character.CharacterCreationScreen;
 import com.gamelab.ui.menu.MenuScreen;
 import com.gamelab.ui.menu.GameMenuScreen;
 import com.gamelab.ui.level.TutorialLevelScreen;
+import com.gamelab.ui.level.StageOneLevelScreen;
 import com.gamelab.ui.inventory.InventoryScreen;
-import com.gamelab.ui.shop.ShopScreen;
 import com.gamelab.ui.level.EnemyArenaScreen;
+import com.gamelab.ui.shop.StageOneMarketScreen;
 import javafx.scene.control.Button;
 
 
@@ -31,8 +38,13 @@ public class Main extends Application {
     private static final String TITLE = "Game Lab: Shadowfall";
     private Stage stage;
     private MenuScreen menu;
-    private GameScreen gameScreen;
     private EnemyArenaScreen enemyArena;
+    private PlayerCharacter campaignPlayer;
+    private Inventory campaignInventory;
+    private CoinWallet campaignWallet;
+    private RuneLoadout campaignRuneLoadout;
+    private RuneService campaignRuneService;
+    private GameMenuScreen gameMenu;
 
     public static void main(String[] args) {
         launch(args);
@@ -65,7 +77,6 @@ public class Main extends Application {
                 e.consume();
             } else {
                 if (menu != null && menu.getScene() == stage.getScene()) menu.handleKey(e.getCode());
-                if (gameScreen != null && gameScreen.getScene() == stage.getScene() && e.getCode() == KeyCode.I) gameScreen.toggleInventory();
             }
         });
 
@@ -78,27 +89,80 @@ public class Main extends Application {
         stage.setOnHidden(e -> { menu.stop(); if (enemyArena != null) enemyArena.stop(); });
         stage.show();
 
-        
+
     }
-    
+
     private void onNewGame() {
         menu.stop();
         showFixedScreen(new CharacterCreationScreen(this::onCharacterCreated, this::returnToMenu));
     }
 
     private void onCharacterCreated(PlayerCharacter player) {
-        final GameMenuScreen[] gameMenu = new GameMenuScreen[1];
-        gameMenu[0] = new GameMenuScreen(player, this::returnToMenu,
-                inventory -> showFixedScreen(new InventoryScreen(inventory, () -> showFixedScreen(gameMenu[0]))));
-        gameMenu[0].setOnShop(inventory -> showFixedScreen(new ShopScreen(
+        campaignPlayer = player;
+        campaignInventory = new Inventory(16);
+        campaignWallet = new CoinWallet();
+        Weapon starterSword = WeaponCatalog.createStarterSword();
+        campaignInventory.addItem(starterSword);
+        campaignInventory.equipWeapon(starterSword, player.getCharacterClass());
+        campaignRuneLoadout = new RuneLoadout(starterSword);
+        campaignRuneService = new RuneService(new GameEventBus());
+        gameMenu = new GameMenuScreen(
+                player,
+                this::returnToMenu,
+                campaignInventory,
+                this::showInventory
+        );
+        showFixedScreen(new TutorialLevelScreen(player, this::onTutorialCompleted));
+    }
+
+    private void onTutorialCompleted() {
+        campaignWallet.addCoins(180);
+        showStageOneMarket(0);
+    }
+
+    private void showInventory(Inventory inventory) {
+        showFixedScreen(new InventoryScreen(
                 inventory,
-                gameMenu[0].getWallet(),
-                player.getCharacterClass(),
-                () -> {
-                    gameMenu[0].refreshWallet();
-                    showFixedScreen(gameMenu[0]);
-                })));
-        showFixedScreen(new TutorialLevelScreen(player, () -> showFixedScreen(gameMenu[0])));
+                campaignRuneLoadout,
+                campaignRuneService,
+                () -> showFixedScreen(gameMenu)
+        ));
+    }
+
+    /**
+     * Stage 1 should call this callback after its final wave. The current inventory tab opens the
+     * same screen as a preview until the stage-one JavaFX scene is connected.
+     */
+    private void onStageOneCompleted() {
+        showStageOneMarket(1);
+    }
+
+    private void showStageOneMarket(int completedStage) {
+        if (campaignPlayer == null || campaignInventory == null || campaignWallet == null) return;
+        Runnable continueAction = completedStage == 0
+                ? this::showStageOneLevel
+                : () -> showFixedScreen(gameMenu);
+        showFixedScreen(new StageOneMarketScreen(
+                campaignPlayer,
+                campaignInventory,
+                campaignWallet,
+                completedStage,
+                () -> showFixedScreen(gameMenu),
+                continueAction
+        ));
+    }
+
+    private void showStageOneLevel() {
+        if (campaignPlayer == null || campaignInventory == null
+                || campaignWallet == null || campaignRuneLoadout == null) return;
+        showFixedScreen(new StageOneLevelScreen(
+                campaignPlayer,
+                campaignInventory,
+                campaignWallet,
+                campaignRuneLoadout,
+                this::onStageOneCompleted,
+                () -> showStageOneMarket(0)
+        ));
     }
 
     private void returnToMenu() {
