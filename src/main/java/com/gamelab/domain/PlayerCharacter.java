@@ -23,6 +23,8 @@ public class PlayerCharacter {
     private int bootsColorIndex;
     private int headwearIndex = -1;
     private int healthBonus, attackBonus;
+    private final int baseMana;
+    private int mana;
     private final java.util.Map<String, Integer> skillRanks = new java.util.LinkedHashMap<>();
     public static final int MAX_LEVEL = 15;
 
@@ -52,6 +54,8 @@ public class PlayerCharacter {
         this.damage = damage;
         this.baseDamage = damage;
         this.defense = defense;
+        this.baseMana = classIndex() == 2 ? 120 : 0;
+        this.mana = baseMana;
 
         this.level = 1;
         this.experience = 0;
@@ -220,6 +224,18 @@ public class PlayerCharacter {
     public int getBonusResourceAmount() { return resourcesRank * switch(classIndex()){case 0->8;case 2->6;default->0;}; }
     public int getResourceCooldownReductionPercent() { return classIndex()==1 ? resourcesRank*2 : 0; }
     public int getInvisibilityCostReductionPercent() { return classIndex()==3 ? resourcesRank*1 : 0; }
+    public int getMaxMana() { return baseMana + getBonusResourceAmount(); }
+    public int getMana() { return mana; }
+    public boolean spendMana(int amount) {
+        if (amount < 0 || mana < amount) return false;
+        mana -= amount;
+        return true;
+    }
+    public void restoreMana(int amount) {
+        if (amount < 0) throw new IllegalArgumentException("Mana restoration cannot be negative");
+        mana = Math.min(getMaxMana(), mana + amount);
+    }
+    public void restoreFullMana() { mana = getMaxMana(); }
 
     private int healthPerRank() { return switch(classIndex()){case 0->15;case 1->10;default->8;}; }
     private int attackPercentPerRank() { return switch(classIndex()){case 0->8;case 1,3->6;default->3;}; }

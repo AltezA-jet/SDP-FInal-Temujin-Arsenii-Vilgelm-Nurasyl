@@ -9,6 +9,7 @@ import com.gamelab.domain.PlayerCharacter;
 import com.gamelab.pattern.factory.EnemyFactory;
 import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.pattern.strategy.*;
+import com.gamelab.application.hero.*;
 import java.util.*;
 import static com.gamelab.application.arena.ArenaCatalog.Attack;
 import static com.gamelab.application.arena.PlatformPhysics.*;
@@ -59,10 +60,15 @@ public final class ArenaSimulation {
         public final boolean throughPlatforms;
         public final Attack kind;
         public final String source;
+        public final boolean fromPlayer;
         private Projectile(double x, double y, double vx, double vy, double radius, int damage,
                            boolean throughPlatforms, Attack kind, String source) {
+            this(x,y,vx,vy,radius,damage,throughPlatforms,kind,source,false);
+        }
+        private Projectile(double x, double y, double vx, double vy, double radius, int damage,
+                           boolean throughPlatforms, Attack kind, String source, boolean fromPlayer) {
             this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.radius=radius; this.damage=damage;
-            this.throughPlatforms=throughPlatforms; this.kind=kind; this.source=source;
+            this.throughPlatforms=throughPlatforms; this.kind=kind; this.source=source; this.fromPlayer=fromPlayer;
         }
     }
     public static final class Zone {
@@ -78,6 +84,7 @@ public final class ArenaSimulation {
     }
 
     private final PlayerCharacter player;
+    private final HeroController heroController;
     private final GameEventBus events;
     private final CombatService combat;
     private final RuneCombatService runeCombat;
@@ -113,6 +120,10 @@ public final class ArenaSimulation {
     }
     public ArenaSimulation(PlayerCharacter player, GameEventBus events, Random random) {
         this.player = Objects.requireNonNull(player);
+        String className=player.getCharacterClass().toUpperCase(Locale.ROOT);
+        heroController=className.contains("ARCHER") ? new ArcherController(player)
+                : className.contains("MAGE") ? new MageController(player)
+                : new BasicHeroController(player);
         this.events = Objects.requireNonNull(events);
         this.random=Objects.requireNonNull(random);
         combat = new CombatService(events);
@@ -134,6 +145,7 @@ public final class ArenaSimulation {
         });
     }
     public PlayerCharacter player() { return player; }
+    public HeroController heroController() { return heroController; }
     public Body hero() { return hero; }
     public List<Fighter> fighters() { return Collections.unmodifiableList(fighters); }
     public List<Projectile> projectiles() { return Collections.unmodifiableList(projectiles); }
@@ -191,7 +203,7 @@ public final class ArenaSimulation {
     }
     public void restart() { if(fullStage) startStage(stage); else start(stage, bossEncounter); }
     public void restorePlayer() {
-        player.heal(player.getMaxHealth());
+        heroController.restore();
         hero.x=350; hero.y=FLOOR; hero.velocityY=0; hero.grounded=true;
         poisonTime=0; poisonTick=0; slowTime=0; attackCooldown=0; dodgeTime=0; dodgeCooldown=0; hitProtection=0; attackBuffer=0; playerHitPending=false;
         stepDistance=0;
@@ -240,6 +252,10 @@ public final class ArenaSimulation {
 
     public boolean attack() {
         if (!player.isAlive()) return false;
+        if (!heroController.canAttack()) {
+            events.publish("PLAYER_ATTACK_BLOCKED", "Недостаточно маны");
+            return false;
+        }
         if(attackCooldown>0 || dodging()) {
             if(attackCooldown<=.14 && dodgeTime<=.14) attackBuffer=.16;
             return false;
@@ -249,11 +265,16 @@ public final class ArenaSimulation {
         playerAttackDuration=(playerStrategy instanceof HeavyAttackStrategy ? .75 : .40)/speed;
         attackCooldown=playerAttackDuration;
         playerAttackTime=0; playerHitDelay=playerAttackDuration*.5; playerHitPending=true;
-        events.publish("PLAYER_ATTACK","Удар: " + playerStrategy.getStrategyName());
+        if (!heroController.beginAttack()) return false;
+        events.publish("PLAYER_ATTACK",heroController.attackLabel());
         return true;
     }
 
     private void playerStrike() {
+        if (isRangedClass()) {
+            spawnPlayerProjectile();
+            return;
+        }
         for (Fighter fighter : fighters) {
             double dx = fighter.body.x-hero.x;
             boolean ball=fighter.profile.attack()==Attack.ROLL && (fighter.charging>0 || fighter.animation.equals("transform_back") && fighter.animationTime<.28);
@@ -284,6 +305,30 @@ public final class ArenaSimulation {
             }
         }
     }
+    private boolean isMage() { return heroController.magical(); }
+    private boolean isRangedClass() { return heroController.ranged(); }
+    private void spawnPlayerProjectile() {
+        double direction=facingLeft ? -1 : 1;
+        boolean mage=heroController.magical();
+        Fighter target=fighters.stream().filter(f -> f.enemy.isAlive()
+                        && (f.body.x-hero.x)*direction>0)
+                .min(Comparator.comparingDouble(f -> Math.abs(f.body.x-hero.x))).orElse(null);
+        double startX=hero.x+direction*58;
+        double startY=hero.y-82;
+        double vx=direction*heroController.projectileSpeed(),vy=0;
+        if(target!=null) {
+            double targetX=target.body.x;
+            double targetY=target.body.y-58;
+            double angle=Math.atan2(targetY-startY,targetX-startX);
+            vx=Math.cos(angle)*heroController.projectileSpeed();
+            vy=Math.sin(angle)*heroController.projectileSpeed();
+        }
+        int shotDamage=Math.max(1,playerStrategy.calculateDamage(player));
+        projectiles.add(new Projectile(startX,startY,vx,vy,
+                heroController.projectileRadius(),shotDamage,false,mage?Attack.FIREBALL:Attack.SHOT,
+                heroController.projectileSource(),true));
+        events.publish("PLAYER_PROJECTILE",heroController.attackLabel());
+    }
     private boolean hasRune(RuneType type) { return loadout!=null && loadout.getInstalledRunes().stream().anyMatch(r -> r.getRuneType()==type); }
 
     private void recordDeath(Fighter fighter) {
@@ -304,6 +349,7 @@ public final class ArenaSimulation {
             throw new IllegalArgumentException("Invalid simulation step");
         if (!player.isAlive()) return;
         attackCooldown=Math.max(0,attackCooldown-dt);
+        heroController.tick(dt);
         hitProtection=Math.max(0,hitProtection-dt);
         if(attackBuffer>0) {
             attackBuffer=Math.max(0,attackBuffer-dt);
@@ -318,12 +364,13 @@ public final class ArenaSimulation {
         crouching=crouch && hero.grounded;
         if (movement != 0 && !playerHitPending && !dodging()) facingLeft=movement<0;
         slowTime=Math.max(0,slowTime-dt);
-        double speed=dodging() ? (facingLeft ? -640 : 640) : playerHitPending ? 0 :
-                movement*(crouching ? 150 : 310)*(attackCooldown>0?.65:1)*(slowed()?.6:1);
         boolean airborne=!hero.grounded;double fallSpeed=hero.velocityY,previousX=hero.x;
-        physics.step(hero,speed,24,dt,platforms);
+        double controlledSpeed=dodging() ? (facingLeft ? -640 : 640)
+                : playerHitPending ? 0
+                : movement==0 ? 0 : Math.copySign(heroController.movementSpeed(crouching,slowed(),attackCooldown>0,false),movement);
+        physics.step(hero,controlledSpeed,24,dt,platforms);
         if(airborne && hero.grounded && fallSpeed>180) events.publish("PLAYER_LANDED","Приземление");
-        if(!airborne && hero.grounded && !dodging() && Math.abs(speed)>1) {
+        if(!airborne && hero.grounded && !dodging() && Math.abs(controlledSpeed)>1) {
             stepDistance+=Math.abs(hero.x-previousX);
             if(stepDistance>=85) { stepDistance-=85; events.publish("PLAYER_STEP","Шаг"); }
         } else stepDistance=0;
@@ -651,6 +698,18 @@ public final class ArenaSimulation {
             Projectile shot=iterator.next();
             double oldX=shot.x, oldY=shot.y;
             shot.x+=shot.vx*dt; shot.y+=shot.vy*dt; shot.life-=dt;
+            if (shot.fromPlayer) {
+                Fighter target=fighters.stream().filter(f -> f.enemy.isAlive()
+                        && shot.x+shot.radius>f.body.x-34 && shot.x-shot.radius<f.body.x+34
+                        && shot.y+shot.radius>f.body.y-110 && shot.y-shot.radius<f.body.y).findFirst().orElse(null);
+                boolean terrain=FiringPositionPlanner.blocked(oldX,oldY,shot.x,shot.y,shot.radius,platforms);
+                boolean expired=shot.life<=0 || shot.x<-60 || shot.x>1980 || shot.y<180 || shot.y>FLOOR;
+                if (target!=null || terrain || expired) {
+                    if (target!=null) playerProjectileHit(shot,target);
+                    iterator.remove();
+                }
+                continue;
+            }
             double heroHeight=crouching ? HERO_CROUCH_HEIGHT : HERO_HEIGHT;
             boolean hit=shot.x+shot.radius>hero.x-24 && shot.x-shot.radius<hero.x+24
                     && shot.y+shot.radius>hero.y-heroHeight && shot.y-shot.radius<hero.y;
@@ -680,10 +739,29 @@ public final class ArenaSimulation {
         }
     }
 
+    private void playerProjectileHit(Projectile shot, Fighter fighter) {
+        if (!fighter.enemy.isAlive()) return;
+        double protection=fighter.profile.attack()==Attack.FINAL && fighter.phase==1 && !hasRune(RuneType.ANCIENT)?.8:1;
+        int dealt=loadout==null ? combat.attack(player,fighter.enemy,playerStrategy)
+                : runeCombat.attack(player,fighter.enemy,playerStrategy,loadout,protection);
+        if (dealt>0) {
+            if(hasRune(RuneType.POISON)||hasRune(RuneType.FIRE)) { fighter.dotTime=3; fighter.dotDamage=hasRune(RuneType.FIRE)?4:3; }
+            if(hasRune(RuneType.ICE)) fighter.slowTime=2;
+            if(hasRune(RuneType.LIGHTNING)) {
+                Fighter other=fighters.stream().filter(f -> f!=fighter && f.enemy.isAlive()
+                        && Math.hypot(f.body.x-fighter.body.x,f.body.y-fighter.body.y)<260).findFirst().orElse(null);
+                if(other!=null) { combat.damageEnemy(other.enemy,Math.max(1,dealt/3)); recordDeath(other); }
+            }
+            events.publish("WEAPON_IMPACT","Попадание: "+fighter.profile.name(),
+                    new com.gamelab.application.audio.WeaponImpact(fighter.profile.hitSurface(),dealt));
+        }
+        recordDeath(fighter);
+    }
+
     private void hurt(int damage) {
         if (damageProtected() || !player.isAlive()) return;
         int before=player.getHealth();
-        player.takeDamage(damage);
+        heroController.receiveDamage(damage);
         if(player.getHealth()<before) hitProtection=.30;
         int lost=before-player.getHealth();
         if(lost>0) {

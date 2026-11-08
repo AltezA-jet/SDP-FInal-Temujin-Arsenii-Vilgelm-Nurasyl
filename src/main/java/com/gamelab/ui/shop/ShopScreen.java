@@ -10,9 +10,12 @@ import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.ui.inventory.InventoryView;
 import com.gamelab.ui.inventory.ItemSpriteResolver;
 import com.gamelab.ui.ShadowfallUi;
+import com.gamelab.ui.components.MenuButton;
+import com.gamelab.domain.item.Potion;
+import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.rune.Rune;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.Node;
@@ -22,6 +25,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
@@ -41,6 +45,11 @@ public final class ShopScreen extends Pane {
     private final InventoryView inventoryView;
     private final Label balanceLabel = new Label();
     private final Label statusLabel = new Label("Choose an item to purchase.");
+    private final TilePane goods = new TilePane();
+    private final MenuButton[] filterButtons = new MenuButton[4];
+    private ShopFilter filter = ShopFilter.ALL;
+
+    private enum ShopFilter { ALL, WEAPONS, RUNES, CONSUMABLES }
 
     public ShopScreen(Inventory inventory, CoinWallet wallet, String characterClass, Runnable onBack) {
         this.inventory = Objects.requireNonNull(inventory, "Inventory cannot be null");
@@ -66,23 +75,32 @@ public final class ShopScreen extends Pane {
         balanceLabel.setGraphic(coinIcon());
         balanceLabel.relocate(1510, 52);
 
-        Label goodsTitle = sectionTitle("GOODS", 70, 135);
+        Label goodsTitle = sectionTitle("GOODS", 70, 170);
         Label inventoryTitle = sectionTitle("YOUR INVENTORY", 1190, 135);
 
-        TilePane goods = new TilePane();
         goods.setPadding(new Insets(12));
         goods.setHgap(18);
         goods.setVgap(18);
         goods.setPrefColumns(3);
         goods.setTileAlignment(Pos.TOP_LEFT);
-        for (Item item : shop.getCatalog()) {
-            goods.getChildren().add(createItemCard(item));
+        HBox filters = new HBox(10);
+        filters.setLayoutX(70);
+        filters.setLayoutY(118);
+        String[] filterNames = {"ALL", "WEAPONS", "RUNES", "CONSUMABLES"};
+        ShopFilter[] filterValues = ShopFilter.values();
+        for (int i=0;i<filterButtons.length;i++) {
+            final int selected=i;
+            MenuButton button=new MenuButton(filterNames[i],150,48);
+            button.setOnAction(() -> { filter=filterValues[selected]; refreshFilters(); renderGoods(); });
+            filterButtons[i]=button;
+            filters.getChildren().add(button);
         }
+        renderGoods();
 
         ScrollPane goodsScroll = new ScrollPane(goods);
         goodsScroll.setLayoutX(55);
-        goodsScroll.setLayoutY(180);
-        goodsScroll.setPrefSize(1060, 700);
+        goodsScroll.setLayoutY(202);
+        goodsScroll.setPrefSize(1060, 678);
         goodsScroll.setFitToWidth(true);
         goodsScroll.setStyle("-fx-background: #100d18; -fx-background-color: #100d18;");
 
@@ -95,19 +113,16 @@ public final class ShopScreen extends Pane {
         statusLabel.setPrefWidth(1100);
         statusLabel.setStyle("-fx-text-fill: #d8c8a8; -fx-font-size: 18px;");
 
-        Button back = new Button("BACK TO GAME");
-        back.setLayoutX(1570);
-        back.setLayoutY(920);
-        back.setPrefSize(250, 62);
-        back.setStyle("-fx-background-color: #392b3b; -fx-text-fill: #f2d08a; -fx-font-size: 16px; -fx-border-color: #a47b50;");
-        back.setOnAction(event -> onBack.run());
+        MenuButton back = new MenuButton("BACK TO GAME",250,62);
+        back.setLayoutX(1570); back.setLayoutY(920); back.setOnAction(onBack);
 
         setOnKeyPressed(event -> {
             if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) onBack.run();
         });
         setFocusTraversable(true);
-        getChildren().addAll(title, balanceLabel, goodsTitle, inventoryTitle, goodsScroll,
+        getChildren().addAll(title, balanceLabel, goodsTitle, inventoryTitle, filters, goodsScroll,
                 inventoryView, statusLabel, back);
+        refreshFilters();
         refresh();
         requestFocus();
     }
@@ -125,10 +140,8 @@ public final class ShopScreen extends Pane {
         Label price = new Label(item.getPrice() + " coins  ·  " + item.getRequiredClass());
         price.setStyle("-fx-text-fill: #ffd66e; -fx-font-size: 14px;");
 
-        Button buy = new Button("BUY");
-        buy.setMaxWidth(Double.MAX_VALUE);
-        buy.setStyle("-fx-background-color: #6b452b; -fx-text-fill: #fff0c2; -fx-font-weight: bold;");
-        buy.setOnAction(event -> purchase(item));
+        MenuButton buy = new MenuButton("BUY",260,46);
+        buy.setOnAction(() -> purchase(item));
 
         VBox card = new VBox(9, itemIcon(item), name, description, price, buy);
         card.setPadding(new Insets(18));
@@ -192,6 +205,24 @@ public final class ShopScreen extends Pane {
     private void refresh() {
         balanceLabel.setText("COINS  " + wallet.getBalance());
         inventoryView.refresh();
+    }
+
+    private void renderGoods() {
+        goods.getChildren().clear();
+        for (Item item : shop.getCatalog()) {
+            boolean visible=switch(filter) {
+                case ALL -> true;
+                case WEAPONS -> item instanceof Weapon;
+                case RUNES -> item instanceof Rune;
+                case CONSUMABLES -> item instanceof Potion;
+            };
+            if(visible) goods.getChildren().add(createItemCard(item));
+        }
+    }
+
+    private void refreshFilters() {
+        ShopFilter[] values=ShopFilter.values();
+        for(int i=0;i<filterButtons.length;i++) filterButtons[i].setSelected(filter==values[i]);
     }
 
     private Label sectionTitle(String text, double x, double y) {

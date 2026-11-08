@@ -38,6 +38,7 @@ public final class EnemyArenaScreen extends Pane {
     private static final double ENEMY_DRAW_OFFSET_Y=4;
     private static final String ROOT="/assets/enemies/";
     private final Canvas canvas=new Canvas(W,H);
+    private final Canvas playerProjectileCanvas=new Canvas(W,H);
     private final MaleWarriorSprite hero=new MaleWarriorSprite(MaleWarriorSprite.GAME_HEIGHT);
     private final ArenaSimulation simulation;
     private final CombatAudio audio;
@@ -116,6 +117,7 @@ public final class EnemyArenaScreen extends Pane {
         if(campaign) { loadout=simulation.loadout(); activeStage=campaignStage; }
         simulation.setLoadout(loadout);
         PlayerCharacter appearance=simulation.player();
+        hero.setClass(appearance.getCharacterClass());
         hero.setConfiguration(appearance.getHairColorIndex(),appearance.getShirtColorIndex(),appearance.getPantsColorIndex(),appearance.getBootsColorIndex(),appearance.getHeadwearIndex());
         hero.setWeapon(loadout.getWeapon().getName());
         ownsAudio=sharedAudio==null;
@@ -132,7 +134,8 @@ public final class EnemyArenaScreen extends Pane {
         events.subscribe(eventSubscription);
         setPrefSize(W,H); setMinSize(W,H); setMaxSize(W,H);
         setStyle("-fx-background-color: #100d18; -fx-font-size: 18px;");
-        getChildren().addAll(canvas,hero);
+        playerProjectileCanvas.setMouseTransparent(true);
+        getChildren().addAll(canvas,hero,playerProjectileCanvas);
         hero.setMouseTransparent(true);
         if(campaign) buildCampaignControls(); else buildControls();
         setFocusTraversable(true);
@@ -241,10 +244,12 @@ public final class EnemyArenaScreen extends Pane {
         hero.relocate(Math.rint(simulation.hero().x-hero.prefWidth(-1)/2),simulation.hero().y-hero.prefHeight(-1)+hero.getFootOffset()+HERO_DRAW_OFFSET_Y);
         hero.setOpacity(simulation.dodging() ? .4 : 1);
         health.setText("HP "+simulation.player().getHealth()+" / "+simulation.player().getMaxHealth()
+                +(simulation.player().getMaxMana()>0 ? "    MP "+simulation.player().getMana()+" / "+simulation.player().getMaxMana() : "")
                 +(simulation.poisoned() ? "   ЯД" : "")+(simulation.slowed()?"   ЛЁД":"")+
                 (simulation.fullStage()?"    Волна "+simulation.wave()+"/"+(activeStage==6?1:3):"")+
                 "    Ур. "+simulation.player().getLevel()+"    Уклонение: "+(simulation.dodgeCooldown()<=0?"готово":String.format(java.util.Locale.ROOT,"%.1f",simulation.dodgeCooldown())));
         draw();
+        drawPlayerProjectiles();
     }
     private void leave() { if(campaign) suspend(); else stop(); onBack.run(); }
     public void stop() { timer.stop(); keys.clear(); if(ownsAudio) audio.close(); eventBus.unsubscribe(eventSubscription); }
@@ -304,7 +309,7 @@ public final class EnemyArenaScreen extends Pane {
             }
         }
         for (ArenaSimulation.Fighter fighter : simulation.fighters()) if (fighter.enemy.isAlive()) drawEnemy(g,fighter);
-        for (ArenaSimulation.Projectile shot : simulation.projectiles()) drawProjectile(g,shot);
+        for (ArenaSimulation.Projectile shot : simulation.projectiles()) if(!shot.fromPlayer) drawProjectile(g,shot);
         for(ArenaSimulation.Impact impact:simulation.impacts()) {
             Image sprite=image("3 Этап/fire_mag/fireball_impact.png");
             int frame=Math.min(3,(int)(impact.time/.1));
@@ -343,10 +348,16 @@ public final class EnemyArenaScreen extends Pane {
         g.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
         g.setFill(Color.web("#3b1c27"));g.fillRoundRect(40,59,290,16,5,5);
         g.setFill(Color.web("#ce4b5b"));g.fillRoundRect(40,59,290.0*simulation.player().getHealth()/simulation.player().getMaxHealth(),16,5,5);
+        if(simulation.player().getMaxMana()>0) {
+            g.setFill(Color.web("#241c48"));g.fillRoundRect(40,81,290,12,5,5);
+            g.setFill(Color.web("#7565dc"));g.fillRoundRect(40,81,290.0*simulation.player().getMana()/simulation.player().getMaxMana(),12,5,5);
+            g.setFill(Color.web("#c9c2ff"));g.setFont(Font.font(12));g.fillText("MP  "+simulation.player().getMana()+" / "+simulation.player().getMaxMana(),45,91);
+        }
         double dodge=1-Math.min(1,simulation.dodgeCooldown()/.85);
-        g.setFill(Color.web("#31414f"));g.fillRect(40,92,84,4);
-        g.setFill(dodge==1?Color.web("#a1d5cf"):Color.web("#6f91a6"));g.fillRect(40,92,84*dodge,4);
-        g.setFont(Font.font(13));g.setFill(Color.web("#b7c5ca"));g.fillText("Shift",40,117);
+        double dodgeY=simulation.player().getMaxMana()>0?102:92;
+        g.setFill(Color.web("#31414f"));g.fillRect(40,dodgeY,84,4);
+        g.setFill(dodge==1?Color.web("#a1d5cf"):Color.web("#6f91a6"));g.fillRect(40,dodgeY,84*dodge,4);
+        g.setFont(Font.font(13));g.setFill(Color.web("#b7c5ca"));g.fillText("Shift",40,dodgeY+25);
         String effects=(simulation.poisoned()?"ЯД ":"")+(simulation.slowed()?"ЛЁД":"");
         g.setFill(Color.YELLOWGREEN);g.fillText(effects,220,113);
         g.setFill(Color.rgb(10,8,18,.70));g.fillRoundRect(24,H-63,160,39,9,9);
@@ -435,7 +446,26 @@ public final class EnemyArenaScreen extends Pane {
     }
 
     private void drawProjectile(GraphicsContext g,ArenaSimulation.Projectile shot) {
+        if (shot.fromPlayer) {
+            double angle=Math.toDegrees(Math.atan2(shot.vy,shot.vx));
+            g.save();
+            g.translate(shot.x,shot.y);
+            g.rotate(angle);
+            if (shot.source.equals("player-mage")) {
+                g.setFill(Color.rgb(255,150,45,.24));g.fillOval(-25,-25,50,50);
+                g.setFill(Color.ORANGERED);g.fillOval(-13,-13,26,26);
+                g.setFill(Color.YELLOW);g.fillOval(-7,-7,14,14);
+            } else {
+                g.setStroke(Color.web("#f2d08a"));g.setLineWidth(4);g.strokeLine(-24,0,17,0);
+                g.setFill(Color.web("#e7b35c"));
+                g.fillPolygon(new double[]{24,8,8},new double[]{0,-9,9},3);
+            }
+            g.restore();
+            return;
+        }
         String path=switch (shot.source) {
+            case "player-archer" -> "/assets/enemies/1 Р­С‚Р°Рї/Archer/Arrow.png";
+            case "player-mage" -> "/assets/enemies/3 Р­С‚Р°Рї/fire_mag/fireball_fly.png";
             case "archer" -> "1 Этап/Archer/Arrow.png";
             case "guardian" -> "1 Этап/Rune_Guardian(miniBoss)/rune_guardian_projectile.png";
             case "elemental" -> "2 Этап/ice_elemental/ice_snowball.png";
@@ -445,6 +475,8 @@ public final class EnemyArenaScreen extends Pane {
             case "witch" -> "4 Этап/Queen(miniBoss)/poisonous_sting.png";
             default -> "";
         };
+        if (shot.source.equals("player-archer")) path="1 \u042d\u0442\u0430\u043f/Archer/Arrow.png";
+        if (shot.source.equals("player-mage")) path="3 \u042d\u0442\u0430\u043f/fire_mag/fireball_fly.png";
         Image sprite=path.isEmpty() ? null : image(path);
         if (sprite==null) {
             g.setFill(shot.kind==ArenaCatalog.Attack.POISON || shot.kind==ArenaCatalog.Attack.WITCH ? Color.YELLOWGREEN : Color.MEDIUMPURPLE);
@@ -453,11 +485,18 @@ public final class EnemyArenaScreen extends Pane {
             // All supplied projectiles point left in their source artwork.
             double nativeAngle=180;
             g.save(); g.translate(shot.x,shot.y); g.rotate(Math.toDegrees(Math.atan2(shot.vy,shot.vx))-nativeAngle);
-            int frames=shot.source.equals("mage") || shot.source.equals("witch") ? 4 : 1;
+            int frames=shot.source.equals("mage") || shot.source.equals("player-mage") || shot.source.equals("witch") ? 4 : 1;
             double frameWidth=sprite.getWidth()/frames;
             double h=Math.max(16,shot.radius*1.5), w=h*frameWidth/sprite.getHeight();
             g.drawImage(sprite,((int)(time*10)%frames)*frameWidth,0,frameWidth,sprite.getHeight(),-w/2,-h/2,w,h);
             g.restore();
         }
+    }
+
+    /** Player shots use a canvas above the hero so the muzzle and projectile stay visible. */
+    private void drawPlayerProjectiles() {
+        GraphicsContext g=playerProjectileCanvas.getGraphicsContext2D();
+        g.clearRect(0,0,W,H);
+        for(ArenaSimulation.Projectile shot:simulation.projectiles()) if(shot.fromPlayer) drawProjectile(g,shot);
     }
 }

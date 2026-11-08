@@ -74,6 +74,7 @@ public final class TutorialLevelScreen extends Pane {
         done.put("walk", false); done.put("jump", false); done.put("crouch", false); done.put("attack", false);
         setPrefSize(W, H); setMinSize(W, H); setMaxSize(W, H); setClip(new Rectangle(W, H));
         getChildren().add(world);
+        hero.setClass(player.getCharacterClass());
         hero.setConfiguration(
                 player.getHairColorIndex(),
                 player.getShirtColorIndex(),

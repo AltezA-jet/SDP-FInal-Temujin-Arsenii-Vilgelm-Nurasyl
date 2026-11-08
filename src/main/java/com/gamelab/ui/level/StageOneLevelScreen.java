@@ -204,6 +204,7 @@ public final class StageOneLevelScreen extends Pane {
         projectileCanvas.setMouseTransparent(true);
         getChildren().addAll(world, enemyLayer);
 
+        hero.setClass(player.getCharacterClass());
         hero.setConfiguration(
                 player.getHairColorIndex(),
                 player.getShirtColorIndex(),

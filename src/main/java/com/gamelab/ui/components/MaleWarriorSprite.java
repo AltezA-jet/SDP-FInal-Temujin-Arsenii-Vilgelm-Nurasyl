@@ -12,14 +12,14 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Composites the supplied full-silhouette layers into a correctly ordered 64x96 frame. */
+/** Layered player sprite. The legacy class name is kept for compatibility. */
 public final class MaleWarriorSprite extends Pane {
     public static final double GAME_SCALE=1.5, GAME_HEIGHT=96*GAME_SCALE;
-    private static final String ROOT = "/assets/male_warrior/";
     private static final int FRAME_WIDTH = 64, FRAME_HEIGHT = 96, FRAME_COUNT = 4;
     private final ImageView sprite = new ImageView();
     private final Map<String, Image> images = new HashMap<>();
     private String hairName = "black", shirtName = "blue", pantsName = "blue", bootsName = "blue", state = "idle";
+    private String classId = "warrior";
     private int headwearIndex = -1, frame;
     private double frameTime;
     private boolean attacking, walking;
@@ -32,6 +32,12 @@ public final class MaleWarriorSprite extends Pane {
     }
 
     public void setWeapon(String name) { swordName=name.toLowerCase(java.util.Locale.ROOT).replace(' ','_'); render(); }
+    public void setClass(String characterClass) {
+        String value = characterClass == null ? "" : characterClass.toUpperCase(java.util.Locale.ROOT);
+        classId = value.contains("ARCHER") ? "archer" : value.contains("MAGE") ? "mage"
+                : value.contains("ASSASSIN") ? "assasin" : "warrior";
+        render();
+    }
     public void setAttackDuration(double seconds) { attackFrameDuration=seconds/FRAME_COUNT; }
     public void cancelAttack() {
         if(!attacking) return;
@@ -97,32 +103,52 @@ public final class MaleWarriorSprite extends Pane {
     private void render() {
         boolean movementFrame = walking && !attacking;
         String pose = movementFrame ? "walk" : "idle";
-        int poseFrame = movementFrame ? frame : 0;
-        Image body = image("body_" + pose + ".png");
-        WritableImage result = copy(body, poseFrame, movementFrame);
-        Image bodyReference = image("body_" + pose + ".png");
+        boolean attackSheet = state.equals("attack") && !classId.equals("warrior");
+        boolean sheet = movementFrame || attackSheet;
+        int poseFrame = sheet ? frame : 0;
+        String prefix = classId.equals("warrior") ? "" : classId.equals("assasin") ? "assassin_" : classId + "_";
+        String assetPose = attackSheet ? "attack" : pose;
+        String bodyName = classId.equals("warrior") ? "body_" + assetPose + ".png" : prefix + "base_" + assetPose + ".png";
+        Image body = image(bodyName);
+        WritableImage result = copy(body, poseFrame, sheet);
+        Image bodyReference = image(bodyName);
+        String action = state.equals("attack") && !classId.equals("warrior") ? "Attack" : movementFrame ? "WALK" : "STAY";
+        String classPose = state.equals("attack") && !classId.equals("warrior") ? "attack" : pose;
 
         // All clothing files contain the complete silhouette. Only their changed pixels are applied.
-        overlayChanged(result, bodyReference, image("PANTS_" + (movementFrame ? "WALK" : "STAY") + "/pants_" + pantsName + "_" + pose + ".png"), poseFrame, movementFrame);
-        overlayChanged(result, bodyReference, image("SHIRT_" + (movementFrame ? "WALK" : "STAY") + "/shirt_" + shirtName + "_" + pose + ".png"), poseFrame, movementFrame);
-        overlayChanged(result, bodyReference, image("HAIR_" + (movementFrame ? "WALK" : "STAY") + "/hair_" + hairName + "_" + pose + ".png"), poseFrame, movementFrame);
+        overlayChanged(result, bodyReference, image("PANTS_" + action + "/" + prefix + "pants_" + pantsName + "_" + classPose + ".png"), poseFrame, sheet);
+        overlayChanged(result, bodyReference, image("SHIRT_" + action + "/" + prefix + "shirt_" + shirtName + "_" + classPose + ".png"), poseFrame, sheet);
+        overlayChanged(result, bodyReference, image("HAIR_" + action + "/" + prefix + "hair_" + hairName + "_" + classPose + ".png"), poseFrame, sheet);
         if (headwearIndex >= 0) {
             String[] hats = {"blue", "brown", "green", "grey", "purple"};
             String hat = hats[headwearIndex];
-            String folder = movementFrame ? "HEADWAIR_WALK" : "HEADWAIR_STAY";
-            String file = movementFrame && hat.equals("grey") ? "headwear_grey_walk.png" : "headwair_" + hat + "_" + (movementFrame ? "walk" : "idle") + ".png";
-            overlayChanged(result, bodyReference, image(folder + "/" + file), poseFrame, movementFrame);
+            String folder = classId.equals("warrior") ? "HEADWAIR_" + action : action.equals("Attack") ? "HEADWAIR_attack" : "HEADWAIR_" + action;
+            String file = classId.equals("warrior") && movementFrame && hat.equals("grey") ? "headwear_grey_walk.png" : prefix + "headwear_" + hat + "_" + classPose + ".png";
+            overlayChanged(result, bodyReference, image(folder + "/" + file), poseFrame, sheet);
         }
 
-        String swordFolder = state.equals("attack") ? "ATTACK" : movementFrame ? "WALK" : "STAY";
-        String swordPose = state.equals("attack") ? "attack" : pose;
-        overlayAll(result, image("SWORD_" + swordFolder + "/"+swordName+"_" + swordPose + ".png"), frame, true);
+        String weaponFolder = classId.equals("archer") ? "BOW_" : classId.equals("assasin") ? "DAGGERS_" : classId.equals("mage") ? "STAFF_" : "SWORD_";
+        String weaponPrefix = classId.equals("archer") ? "archer_bow_" : classId.equals("assasin") ? "assassin_dagger_" : classId.equals("mage") ? "mage_staff_" : "";
+        String weaponName = classId.equals("warrior") ? swordName : weaponVariant();
+        String weaponAction = state.equals("attack") ? "ATTACK" : action;
+        String weaponPose = state.equals("attack") ? "attack" : classPose;
+        overlayAll(result, image(weaponFolder + weaponAction + "/" + weaponPrefix + weaponName + "_" + weaponPose + ".png"), frame, true);
         // Boots are the final composite layer. This prevents the body, trousers,
         // headwear or weapon layer from hiding their darker edge pixels.
-        overlayChanged(result, bodyReference, image("BOOTS_" + (movementFrame ? "WALK" : "STAY") + "/boots_" + bootsName + "_" + pose + ".png"), poseFrame, movementFrame);
+        overlayChanged(result, bodyReference, image("BOOTS_" + action + "/" + prefix + "boots_" + bootsName + "_" + classPose + ".png"), poseFrame, sheet);
         // Use the body's feet so a downward sword swing cannot move the character's ground anchor.
         footPadding=SpriteGrounding.bottomPadding(bodyReference.getPixelReader(),movementFrame?poseFrame*FRAME_WIDTH:0,FRAME_WIDTH,FRAME_HEIGHT);
         sprite.setViewport(null); sprite.setImage(result);
+    }
+
+    private String weaponVariant() {
+        int level = swordName.contains("ancient") ? 4 : swordName.contains("darksteel") ? 3
+                : swordName.contains("greatsword") ? 2 : swordName.contains("swift") ? 1 : 0;
+        return switch (classId) {
+            case "archer" -> new String[]{"start", "light", "hunter", "long", "dark"}[level];
+            case "assasin" -> new String[]{"start", "curved", "royal", "shadow", "venom"}[level];
+            default -> new String[]{"start", "arcane", "dark", "holy", "nature"}[level];
+        };
     }
 
     private WritableImage copy(Image source, int index, boolean sheet) {
@@ -151,5 +177,10 @@ public final class MaleWarriorSprite extends Pane {
         return Math.abs(((a >>> 16) & 255) - ((b >>> 16) & 255)) + Math.abs(((a >>> 8) & 255) - ((b >>> 8) & 255)) + Math.abs((a & 255) - (b & 255));
     }
 
-    private Image image(String path) { return images.computeIfAbsent(path, p -> { URL url = MaleWarriorSprite.class.getResource(ROOT + p); if (url == null) throw new IllegalStateException("Missing warrior sprite " + p); return new Image(url.toExternalForm()); }); }
+    private Image image(String path) { return images.computeIfAbsent(classId + ":" + path, ignored -> {
+        String folder = classId.equals("assasin") ? "male_assasin" : "male_" + classId;
+        URL url = MaleWarriorSprite.class.getResource("/assets/" + folder + "/" + path);
+        if (url == null) throw new IllegalStateException("Missing " + classId + " sprite " + path);
+        return new Image(url.toExternalForm());
+    }); }
 }
