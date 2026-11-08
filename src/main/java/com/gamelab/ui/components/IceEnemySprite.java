@@ -15,7 +15,8 @@ public final class IceEnemySprite extends Pane {
     private double frameTime;
 
     public IceEnemySprite(double size) {
-        setPrefSize(size, size); setMinSize(size, size); setMaxSize(size, size);
+        double width=size*64/96;
+        setPrefSize(width, size); setMinSize(width, size); setMaxSize(width, size);
         sprite.setPreserveRatio(true); sprite.setSmooth(false);
         sprite.fitWidthProperty().bind(widthProperty()); sprite.fitHeightProperty().bind(heightProperty());
         sprite.setMouseTransparent(true); getChildren().add(sprite); apply();

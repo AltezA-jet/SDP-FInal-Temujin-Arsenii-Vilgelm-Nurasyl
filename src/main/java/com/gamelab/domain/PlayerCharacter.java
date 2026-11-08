@@ -18,7 +18,9 @@ public class PlayerCharacter {
     private int skillPoints;
     private int healthRank, attackRank, speedRank, resourcesRank;
     private int hairColorIndex;
-    private int outfitIndex;
+    private int shirtColorIndex;
+    private int pantsColorIndex;
+    private int bootsColorIndex;
     private int headwearIndex = -1;
     private int healthBonus, attackBonus;
     private final int baseMana;
@@ -197,12 +199,22 @@ public class PlayerCharacter {
     public int getSpeedRank() { return speedRank; }
     public int getResourcesRank() { return resourcesRank; }
     public void setAppearance(int hairColorIndex, int outfitIndex, int headwearIndex) {
+        setAppearance(hairColorIndex, outfitIndex, outfitIndex, outfitIndex, headwearIndex);
+    }
+    public void setAppearance(int hairColorIndex, int shirtColorIndex, int pantsColorIndex,
+                              int bootsColorIndex, int headwearIndex) {
         this.hairColorIndex = hairColorIndex;
-        this.outfitIndex = outfitIndex;
+        this.shirtColorIndex = shirtColorIndex;
+        this.pantsColorIndex = pantsColorIndex;
+        this.bootsColorIndex = bootsColorIndex;
         this.headwearIndex = headwearIndex;
     }
     public int getHairColorIndex() { return hairColorIndex; }
-    public int getOutfitIndex() { return outfitIndex; }
+    /** Legacy accessor: older screens treated all three clothing layers as one outfit. */
+    public int getOutfitIndex() { return shirtColorIndex; }
+    public int getShirtColorIndex() { return shirtColorIndex; }
+    public int getPantsColorIndex() { return pantsColorIndex; }
+    public int getBootsColorIndex() { return bootsColorIndex; }
     public int getHeadwearIndex() { return headwearIndex; }
     public int getAttackBonusPercent() { return attackBonus; }
     public int getHealthBonus() { return healthBonus; }
@@ -239,7 +251,7 @@ public class PlayerCharacter {
     public boolean isAlive() {
         return health > 0;
     }
-    
+
     public void spendStatPointOnDamage() {
         if (statPoints <= 0) {
             throw new IllegalStateException("No stat points available");

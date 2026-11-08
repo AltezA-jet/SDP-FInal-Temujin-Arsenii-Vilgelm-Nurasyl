@@ -1,6 +1,7 @@
 package com.gamelab.ui.menu;
 
 import com.gamelab.domain.PlayerCharacter;
+import com.gamelab.domain.economy.CoinWallet;
 import com.gamelab.domain.inventory.Inventory;
 import com.gamelab.domain.progression.Difficulty;
 import com.gamelab.ui.components.MenuButton;
@@ -15,6 +16,8 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Polygon;
 import javafx.scene.text.TextAlignment;
+import com.gamelab.domain.inventory.Inventory;
+import java.util.function.Consumer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,25 +33,72 @@ public final class GameMenuScreen extends Pane {
         {"Shadow Strike","Smoke Bomb","Blade Flurry","Execution","Death Dance"}};
     private static final int[] LEVELS={2,3,5,7,8};
     private static final int[][] COSTS={{1,1,2},{1,2,2},{2,2,3},{2,3,3},{3,4,5}};
-    private static final String[] TABS={"CHARACTER","SKILL TREE","INVENTORY","STATS","SETTINGS"};
+    private static final String[] TABS={"CHARACTER","SKILL TREE","INVENTORY","STATS","SETTINGS","SHOP"};
     private final PlayerCharacter player;
     private final Runnable back;
-    private final Inventory inventory = new Inventory(16);
+    private final Inventory inventory;
     private final Consumer<Inventory> openInventory;
+    private Consumer<Inventory> openShop = inventory -> { };
+    private final CoinWallet wallet;
+    private MenuButton shopButton;
     private final List<MenuButton> buttons=new ArrayList<>();
     private final List<Label> dynamic=new ArrayList<>();
     private final MenuButton[] skillNodes=new MenuButton[5];
     private final Label[] skillRankLabels=new Label[4];
     private int selectedClass,selectedSkill=0,selectedTab=1;
     private Label detailTitle,detailBody,points,feedback;
+    private Label currencyLabel;
 
-    public GameMenuScreen(PlayerCharacter player,Runnable back){
-        this(player, back, inventory -> { });
+    public GameMenuScreen(
+            PlayerCharacter player,
+            Runnable back
+    ) {
+        this(
+                player,
+                back,
+                new Inventory(16),
+                inventory -> { }
+        );
     }
-    public GameMenuScreen(PlayerCharacter player,Runnable back,Consumer<Inventory> openInventory){
-        this.player=player;this.back=back;this.openInventory=openInventory;
-        setPrefSize(W,H);setMinSize(W,H);setMaxSize(W,H);
-        drawBackground();drawHeader();drawPanels();drawTree();drawFooter();
+
+    public GameMenuScreen(
+            PlayerCharacter player,
+            Runnable back,
+            Consumer<Inventory> openInventory
+    ) {
+        this(
+                player,
+                back,
+                new Inventory(16),
+                openInventory
+        );
+    }
+
+    public GameMenuScreen(
+            PlayerCharacter player,
+            Runnable back,
+            Inventory inventory,
+            Consumer<Inventory> openInventory
+    ) {
+        this(player,back,inventory,openInventory,new CoinWallet(350));
+    }
+    public GameMenuScreen(PlayerCharacter player,Runnable back,Inventory inventory,
+                          Consumer<Inventory> openInventory,CoinWallet wallet) {
+        this.wallet=java.util.Objects.requireNonNull(wallet);
+        this.player = player;
+        this.back = back;
+        this.inventory = inventory;
+        this.openInventory = openInventory;
+
+        setPrefSize(W, H);
+        setMinSize(W, H);
+        setMaxSize(W, H);
+
+        drawBackground();
+        drawHeader();
+        drawPanels();
+        drawTree();
+        drawFooter();
         refresh();
     }
     private void drawBackground(){
@@ -63,14 +113,16 @@ public final class GameMenuScreen extends Pane {
         for(int i=0;i<TABS.length;i++){
             final int tab=i;
             MenuButton b=button(TABS[i],420+i*190,28,175,54);
+            if(tab==5) shopButton=b;
             b.setOnAction(()->{
                 selectedTab=tab;
                 if(tab==2) openInventory();
+                if(tab==5) openShop.accept(inventory);
                 refresh();
             });
             buttons.add(b);
         }
-        Label currency=label("◆  0",30,1530,32,190,48,"#ffd66e");getChildren().add(currency);
+        currencyLabel=label("◆  "+wallet.getBalance(),30,1620,32,190,48,"#ffd66e");getChildren().add(currencyLabel);
     }
     private void drawPanels(){
         panel(42,135,430,744);panel(1452,135,426,744);
@@ -141,5 +193,9 @@ public final class GameMenuScreen extends Pane {
     private Label label(String text,double x,double y,double size,double w,double h,String color){Label l=new Label(text);l.relocate(x,y);l.setPrefSize(w,h);l.setTextFill(Color.web(color));l.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: "+size+"px; -fx-font-weight: bold;");l.setAlignment(Pos.CENTER_LEFT);return l;}
     private void labelAt(String text,double x,double y,double size,String color){Label l=label(text,x,y,size,390,40,color);getChildren().add(l);}
     public Inventory getInventory(){return inventory;}
+    public CoinWallet getWallet(){return wallet;}
+    public void refreshWallet(){currencyLabel.setText("◆  "+wallet.getBalance());}
+    public void setOnShop(Consumer<Inventory> openShop){this.openShop=openShop==null?inventory->{ }:openShop;}
+    public void setShopAvailable(boolean available) { shopButton.setDisable(!available); }
     public void openInventory(){openInventory.accept(inventory);}
 }

@@ -91,7 +91,19 @@ public final class MenuButton extends Pane {
         textLabel = label;
         if (graphic == null) {
             label.setMaxWidth(width - 18);
-            getChildren().add(getChildren().size() - 2, label);
+            StackPane centered = new StackPane(label);
+            centered.setAlignment(Pos.CENTER);
+            centered.setPrefSize(width, height);
+            centered.resizeRelocate(0, 0, width, height);
+            centered.setMouseTransparent(true);
+            getChildren().add(getChildren().size() - 2, centered);
+        } else if (text == null || text.isBlank()) {
+            StackPane centeredGraphic = new StackPane(graphic);
+            centeredGraphic.setAlignment(Pos.CENTER);
+            centeredGraphic.setPrefSize(width, height);
+            centeredGraphic.resizeRelocate(0, 0, width, height);
+            centeredGraphic.setMouseTransparent(true);
+            getChildren().add(getChildren().size() - 2, centeredGraphic);
         } else {
             graphic.setMouseTransparent(true);
             VBox content = new VBox(5, graphic, label);
