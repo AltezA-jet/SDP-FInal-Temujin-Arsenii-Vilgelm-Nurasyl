@@ -1,22 +1,32 @@
 package com.gamelab.ui.level;
 
 import com.gamelab.domain.PlayerCharacter;
+import com.gamelab.pattern.observer.GameEventBus;
+import com.gamelab.application.audio.WeaponImpact;
+import com.gamelab.ui.audio.CombatAudio;
+import com.gamelab.ui.audio.JavaSoundPlayer;
 import com.gamelab.ui.components.MaleWarriorSprite;
 import com.gamelab.ui.components.IceEnemySprite;
 import com.gamelab.ui.components.MenuButton;
 import com.gamelab.ui.components.EnemyHealthHud;
 import com.gamelab.ui.components.HealthHud;
 import javafx.animation.AnimationTimer;
+import javafx.animation.FadeTransition;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -28,6 +38,8 @@ public final class TutorialLevelScreen extends Pane {
     private static final double SPRITE_BOTTOM_MARGIN = 0;
     private final PlayerCharacter player;
     private final Runnable onComplete;
+    private final GameEventBus events=new GameEventBus();
+    private final CombatAudio audio=new CombatAudio(events,new JavaSoundPlayer());
     private final Canvas world = new Canvas(W, H);
     private final Image trainingBackground = new Image(
             TutorialLevelScreen.class
@@ -38,14 +50,17 @@ public final class TutorialLevelScreen extends Pane {
     private final HealthHud healthHud = new HealthHud();
     private final EnemyHealthHud enemyHealthHud = new EnemyHealthHud("tutorial-enemy", 3, 3);
     private final ImageView snowball = new ImageView(new Image(TutorialLevelScreen.class.getResource("/assets/2 Этап-Enemy(1,2,3)/ice_snowball.png").toExternalForm()));
-    private final Label objective = label("", 46, 164, 520, 42, "#ffe3a0");
-    private final Label progress = label("", 46, 214, 520, 32, "#d9c8b6");
+    private final Label objective = label("", 15, 492, 52, 390, 48, "#ffe3a0");
+    private final Label progress = label("", 14, 888, 52, 246, 48, "#f4ead9");
+    private final Pane tutorialHints = new Pane();
+    private final Pane completionHud = new Pane();
     private final Map<String, Boolean> done = new LinkedHashMap<>();
     private double x = 800, y = GROUND_Y - SPRITE_BOTTOM_MARGIN, vy, time, enemyX = 1450;
     private double snowX, snowY, snowTimer;
     private boolean snowballFlying, enemyAlive = true;
     private int enemyDirection = -1, enemyHealth = 3;
     private boolean left, right, crouching, jumping;
+    private boolean nextButtonAdded;
     private long last;
     private final AnimationTimer timer = new AnimationTimer() {
         @Override public void handle(long now) {
@@ -59,7 +74,14 @@ public final class TutorialLevelScreen extends Pane {
         done.put("walk", false); done.put("jump", false); done.put("crouch", false); done.put("attack", false);
         setPrefSize(W, H); setMinSize(W, H); setMaxSize(W, H); setClip(new Rectangle(W, H));
         getChildren().add(world);
-        hero.setConfiguration(player.getHairColorIndex(), player.getOutfitIndex(), player.getHeadwearIndex()); hero.relocate(x, y - 185); getChildren().add(hero);
+        hero.setClass(player.getCharacterClass());
+        hero.setConfiguration(
+                player.getHairColorIndex(),
+                player.getShirtColorIndex(),
+                player.getPantsColorIndex(),
+                player.getBootsColorIndex(),
+                player.getHeadwearIndex()
+        ); hero.relocate(x, y - 185); getChildren().add(hero);
         enemy.relocate(1450, GROUND_Y - 190); getChildren().add(enemy);
         healthHud.relocate(32, 32); healthHud.setHealth(player.getHealth(), player.getMaxHealth()); getChildren().add(healthHud);
         enemyHealthHud.relocate(enemyX - 55, GROUND_Y - 220); getChildren().add(enemyHealthHud);
@@ -67,18 +89,74 @@ public final class TutorialLevelScreen extends Pane {
         buildHud();
         setFocusTraversable(true); requestFocus();
         setOnKeyPressed(e -> key(e.getCode(), true)); setOnKeyReleased(e -> key(e.getCode(), false));
+        sceneProperty().addListener((obs,old,value) -> { if (old!=null && value==null) stop(); });
+        world.setOnMousePressed(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                hero.setAttacking();
+                attackEnemy();
+                action("attack");
+            }
+        });
         timer.start();
     }
 
     private void buildHud() {
-        Label title = label("LEVEL 0  //  TRAINING YARD", 46, 46, 800, 56, "#f6c66d"); getChildren().add(title);
-        Label subtitle = label("Освой управление, чтобы открыть первую локацию", 21, 48, 108, 700, 34, "#c8b39b"); getChildren().add(subtitle);
-        Rectangle card = new Rectangle(600, 270, Color.rgb(11, 8, 18, .88)); card.setLayoutX(42); card.setLayoutY(140); card.setStroke(Color.web("#96613c")); getChildren().add(card);
-        getChildren().addAll(objective, progress);
-        MenuButton attack = new MenuButton("J / ЛКМ  УДАР", 300, 58); attack.relocate(1470, 870); attack.setOnAction(() -> { hero.setAttacking(); attackEnemy(); action("attack"); }); getChildren().add(attack);
-        Label keys = label("A / D или ← / →   ходьба\nW / SPACE          прыжок\nS                    присяд\nJ / ЛКМ              удар", 22, 1470, 742, 390, 112, "#e8d5bb"); keys.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: 18px; -fx-line-spacing: 8px;"); getChildren().add(keys);
-        Label hint = label("Доберись до костра после выполнения всех упражнений", 18, 600, 950, 720, 30, "#caa56e"); hint.setAlignment(Pos.CENTER); getChildren().add(hint);
+        Rectangle taskCard = panel(470, 12, 680, 96);
+        Rectangle controlsCard = panel(1170, 12, 720, 96);
+        taskCard.setEffect(new DropShadow(18, Color.rgb(0, 0, 0, .65)));
+        controlsCard.setEffect(new DropShadow(18, Color.rgb(0, 0, 0, .65)));
+
+        Label title = label("ЭТАП 0  //  ТРЕНИРОВОЧНЫЙ ЛАГЕРЬ", 19,
+                492, 20, 430, 28, "#f6c66d");
+        Label subtitle = label("4 ДЕЙСТВИЯ ОТКРОЮТ ПУТЬ", 11,
+                888, 22, 246, 24, "#d5b98c");
+        subtitle.setAlignment(Pos.CENTER_RIGHT);
+
+        Label controlsTitle = label("УПРАВЛЕНИЕ", 18,
+                1192, 20, 180, 28, "#f6c66d");
+        Label controlsHint = label("КЛАВИАТУРА  /  МЫШЬ", 11,
+                1644, 22, 222, 24, "#d5b98c");
+        controlsHint.setAlignment(Pos.CENTER_RIGHT);
+
+        GridPane keys = new GridPane();
+        keys.relocate(1192, 52);
+        keys.setHgap(14);
+        keys.setVgap(3);
+        keys.getColumnConstraints().addAll(
+                new ColumnConstraints(100), new ColumnConstraints(116),
+                new ColumnConstraints(116), new ColumnConstraints(112));
+        addControlPair(keys, 0, 0, "A / D", "ХОДЬБА");
+        addControlPair(keys, 0, 2, "W / SPACE", "ПРЫЖОК");
+        addControlPair(keys, 1, 0, "S", "ПРИСЯД");
+        addControlPair(keys, 1, 2, "J / ЛКМ", "УДАР");
+
+        tutorialHints.getChildren().addAll(
+                taskCard, controlsCard, title, subtitle, objective, progress,
+                controlsTitle, controlsHint, keys
+        );
+
+        Rectangle completeCard = panel(610, 910, 700, 126);
+        completeCard.setEffect(new DropShadow(24, Color.rgb(0, 0, 0, .72)));
+        Label completeText = label("✓ ТРЕНИРОВКА ЗАВЕРШЕНА", 19, 650, 920, 620, 30, "#f6c66d");
+        completeText.setAlignment(Pos.CENTER);
+        MenuButton next = new MenuButton("ПЕРЕЙТИ В ЛОКАЦИЮ 1", 420, 62);
+        next.relocate(750, 958);
+        next.setOnAction(() -> { timer.stop(); onComplete.run(); });
+        completionHud.getChildren().addAll(completeCard, completeText, next);
+        completionHud.setVisible(false);
+        completionHud.setOpacity(0);
+        completionHud.setMouseTransparent(true);
+
+        getChildren().addAll(tutorialHints, completionHud);
         refreshHud();
+    }
+
+    private static void addControlPair(GridPane grid, int row, int column,
+                                       String key, String action) {
+        Label keyLabel = label(key, 13, 0, 0, 110, 21, "#fff2d1");
+        Label actionLabel = label(action, 13, 0, 0, 110, 21, "#f6c66d");
+        grid.add(keyLabel, column, row);
+        grid.add(actionLabel, column + 1, row);
     }
 
     private void update(double dt) {
@@ -112,8 +190,10 @@ public final class TutorialLevelScreen extends Pane {
     }
 
     private void attackEnemy() {
+        events.publish("PLAYER_ATTACK","Взмах меча");
         if (!enemyAlive || Math.abs(enemyX - x) > 240) return;
         enemyHealth--;
+        events.publish("WEAPON_IMPACT","Удар по ледяному элементалю",new WeaponImpact(WeaponImpact.Surface.HARD,1));
         enemyHealthHud.setHealth(enemyHealth, 3);
         if (enemyHealth <= 0) {
             enemyAlive = false; enemy.setVisible(false); snowballFlying = false; snowball.setVisible(false);
@@ -124,21 +204,48 @@ public final class TutorialLevelScreen extends Pane {
     private void action(String name) { if (!done.get(name)) { done.put(name, true); refreshHud(); } }
 
     private void refreshHud() {
-        String current = done.get("walk") ? done.get("jump") ? done.get("crouch") ? done.get("attack") ? "Готово! Вход в локацию открыт." : "Теперь попробуй ударить (J или кнопка)" : "Теперь присядь (S)" : "Теперь прыгни (W / SPACE)" : "Начни с ходьбы (A / D)";
-        objective.setText(current);
-        progress.setText("Ходьба " + mark("walk") + "   Прыжок " + mark("jump") + "\nПрисяд " + mark("crouch") + "   Удар " + mark("attack"));
-        if (done.values().stream().allMatch(Boolean::booleanValue)) {
-            MenuButton next = new MenuButton("ПЕРЕЙТИ В ЛОКАЦИЮ 1", 420, 66); next.relocate(750, 930); next.setOnAction(() -> { timer.stop(); onComplete.run(); }); getChildren().add(next);
+        String current = done.get("walk") ? done.get("jump") ? done.get("crouch") ? done.get("attack") ? "Готово! Вход в локацию открыт." : "Теперь ударь (J / ЛКМ)" : "Теперь присядь (S)" : "Теперь прыгни (W / SPACE)" : "Начни с ходьбы (A / D)";
+        objective.setText("ТЕКУЩЕЕ ЗАДАНИЕ\n" + current);
+        progress.setText("ХОДЬБА " + mark("walk") + "   ПРЫЖОК " + mark("jump")
+                + "\nПРИСЯД " + mark("crouch") + "   УДАР   " + mark("attack"));
+        if (done.values().stream().allMatch(Boolean::booleanValue) && !nextButtonAdded) {
+            nextButtonAdded = true;
+            showCompletionHud();
         }
+    }
+
+    private void showCompletionHud() {
+        FadeTransition hideHints = new FadeTransition(Duration.millis(420), tutorialHints);
+        hideHints.setFromValue(1);
+        hideHints.setToValue(0);
+        hideHints.setOnFinished(e -> tutorialHints.setVisible(false));
+        hideHints.play();
+
+        completionHud.setVisible(true);
+        completionHud.setMouseTransparent(false);
+        FadeTransition showComplete = new FadeTransition(Duration.millis(520), completionHud);
+        showComplete.setFromValue(0);
+        showComplete.setToValue(1);
+        showComplete.play();
     }
     private String mark(String key) { return done.get(key) ? "✓" : "○"; }
 
     private void draw() {
         GraphicsContext g = world.getGraphicsContext2D();
         g.drawImage(trainingBackground, 0, 0, W, H);
-        g.setFill(Color.rgb(0, 0, 0, .35)); g.fillRect(0, 0, W, 118); g.setFill(Color.rgb(9, 7, 15, .78)); g.fillRect(42, 140, 600, 270);
+        g.setFill(Color.rgb(0, 0, 0, .35)); g.fillRect(0, 0, W, 118);
     }
     private static Label label(String text, double x, double y, double w, double h, String color) { Label l = new Label(text); l.relocate(x, y); l.setPrefSize(w, h); l.setTextFill(Color.web(color)); l.setStyle("-fx-font-family: 'Monospaced'; -fx-font-weight: bold;"); return l; }
     private static Label label(String text, double size, double x, double y, double w, double h, String color) { Label l = label(text, x, y, w, h, color); l.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: " + size + "px; -fx-font-weight: bold;"); return l; }
-    public void stop() { timer.stop(); }
+    private static Rectangle panel(double x, double y, double w, double h) {
+        Rectangle panel = new Rectangle(w, h, Color.rgb(9, 7, 15, .91));
+        panel.setLayoutX(x);
+        panel.setLayoutY(y);
+        panel.setStroke(Color.web("#d79b4f"));
+        panel.setStrokeWidth(3);
+        panel.setArcWidth(12);
+        panel.setArcHeight(12);
+        return panel;
+    }
+    public void stop() { timer.stop(); audio.close(); }
 }
