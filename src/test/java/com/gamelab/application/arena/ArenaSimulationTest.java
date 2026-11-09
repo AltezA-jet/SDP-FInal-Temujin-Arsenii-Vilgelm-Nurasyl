@@ -301,7 +301,7 @@ class ArenaSimulationTest {
     @Test void woundedMeleeRepeatsRetreatAndAttack() {
         ArenaSimulation arena=arena(); arena.start(1,false); arena.hero().x=1400;
         var soldier=arena.fighters().get(1); arena.woundEnemies();
-        advance(arena,1.8); assertTrue(soldier.retreating()); assertEquals(0,soldier.attacks);
+        advance(arena,.8); assertTrue(soldier.retreating()); assertEquals(0,soldier.attacks);
         boolean retreatedAfterAttack=false;
         for (int i=0;i<2500;i++) {
             arena.update(.02,0,false);
@@ -313,7 +313,7 @@ class ArenaSimulationTest {
     @Test void woundedRangedReturnsToAttack() {
         ArenaSimulation arena=arena(); arena.start(2,false); arena.hero().x=1500;
         var elemental=arena.fighters().get(1); arena.woundEnemies();
-        advance(arena,1.8); assertEquals(0,elemental.attacks);
+        advance(arena,.8); assertEquals(0,elemental.attacks);
         advance(arena,35); assertTrue(elemental.attacks>=2);
     }
 
@@ -324,15 +324,15 @@ class ArenaSimulationTest {
         assertFalse(FiringPositionPlanner.canShoot(100,FLOOR,1800,FLOOR,580,ArenaSimulation.PLATFORMS));
     }
 
-    @Test void retreatDurationIsRandomAndWithinTwoToSevenSeconds() {
+    @Test void retreatDurationIsRandomAndWithinOneToThreeSeconds() {
         Enemy enemy=EnemyFactory.create(EnemyType.RUIN_SOLDIER,"wounded",100,0);
         enemy.takeDamage(enemy.getMaxHealth()-1);
         var behavior=new WoundedRetreatBehavior(new MeleeBehavior(),330,new MeleeBehavior(),new java.util.Random(42));
         java.util.Set<Integer> durations=new java.util.HashSet<>();
         for (int cycle=0;cycle<10;cycle++) {
             int ticks=0;
-            while (!behavior.isApproaching(enemy) && ticks<710) { behavior.update(enemy,0,0,.01); ticks++; }
-            assertTrue(ticks>=200 && ticks<=701); assertTrue(behavior.isApproaching(enemy));
+            while (!behavior.isApproaching(enemy) && ticks<310) { behavior.update(enemy,0,0,.01); ticks++; }
+            assertTrue(ticks>=100 && ticks<=301); assertTrue(behavior.isApproaching(enemy));
             durations.add(ticks); behavior.attackCompleted(enemy); assertTrue(behavior.isRetreating(enemy));
         }
         assertTrue(durations.size()>1);

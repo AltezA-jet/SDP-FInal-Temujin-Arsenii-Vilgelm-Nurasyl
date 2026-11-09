@@ -455,7 +455,8 @@ public final class EnemyArenaScreen extends Pane {
             g.save(); g.translate(shot.x,shot.y); g.rotate(Math.toDegrees(Math.atan2(shot.vy,shot.vx))-nativeAngle);
             int frames=shot.source.equals("mage") || shot.source.equals("witch") ? 4 : 1;
             double frameWidth=sprite.getWidth()/frames;
-            double h=Math.max(16,shot.radius*1.5), w=h*frameWidth/sprite.getHeight();
+            double scale=shot.source.equals("archer") ? .6 : 1;
+            double h=Math.max(16,shot.radius*1.5)*scale, w=h*frameWidth/sprite.getHeight();
             g.drawImage(sprite,((int)(time*10)%frames)*frameWidth,0,frameWidth,sprite.getHeight(),-w/2,-h/2,w,h);
             g.restore();
         }
