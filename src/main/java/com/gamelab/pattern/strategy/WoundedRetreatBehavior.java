@@ -4,7 +4,7 @@ import com.gamelab.domain.Enemy;
 import java.util.Objects;
 import java.util.random.RandomGenerator;
 
-/** Wounded enemies retreat for 2–7 seconds, approach for one attack, and repeat. */
+/** Wounded enemies retreat for 1–3 seconds, approach for one attack, and repeat. */
 public final class WoundedRetreatBehavior implements EnemyBehavior {
     private final EnemyBehavior normal;
     private final EnemyBehavior retreat;
@@ -32,7 +32,7 @@ public final class WoundedRetreatBehavior implements EnemyBehavior {
     public boolean isRetreating(Enemy enemy) { return isWounded(enemy) && !approaching; }
     public boolean isApproaching(Enemy enemy) { return isWounded(enemy) && approaching; }
     private void beginRetreat() {
-        woundedActive=true; approaching=false; phaseTime=random.nextDouble(2,7);
+        woundedActive=true; approaching=false; phaseTime=random.nextDouble(1,3);
     }
     public void attackCompleted(Enemy enemy) { if (isWounded(enemy)) beginRetreat(); }
 
