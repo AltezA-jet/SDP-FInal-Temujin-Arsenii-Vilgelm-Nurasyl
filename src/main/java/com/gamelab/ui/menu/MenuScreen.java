@@ -34,7 +34,7 @@ import java.util.Random;
  *   ui/backgrounds/menu_bg.png clean artwork (no logo, buttons, stars or embers)
  *   effects canvas   stars, castle windows, lantern glow, lake shimmer, embers, lantern sparks
  *   logo.png         separate logo + a moving shine
- *   MenuButton x4    identical buttons with mouse / keyboard focus
+ *   MenuButton x5    identical buttons with mouse / keyboard focus
  */
 public final class MenuScreen extends Pane {
 
@@ -45,7 +45,7 @@ public final class MenuScreen extends Pane {
     private static final double LOGO_X = 533.97;
     private static final double LOGO_Y = 180.29;
     private static final double FRAME_X = 756.75;
-    private static final double[] BTN_Y = {434.07, 535.12, 636.17, 737.22};
+    private static final double[] BTN_Y = {434.07, 535.12, 636.17, 737.22, 838.27};
     private static final double[][] LABEL_OFF = {{115.98, 26.41}, {121.72, 26.41}, {122.87, 27.56}, {166.51, 28.71}};
     private static final double GLOW_DX = -10.33;
     private static final double GLOW_DY = -8.04;
@@ -67,7 +67,7 @@ public final class MenuScreen extends Pane {
 
     private final Random rnd = new Random();
     private final Canvas fx = new Canvas(W, H);
-    private final MenuButton[] buttons = new MenuButton[4];
+    private final MenuButton[] buttons = new MenuButton[5];
     private int focus = 0;
 
     private Image atlas;
@@ -138,10 +138,12 @@ public final class MenuScreen extends Pane {
 
         Image frame = require("/assets/ui/buttons/button_frame.png");
         Image glow = require("/assets/ui/buttons/button_glow.png");
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < buttons.length; i++) {
             final int index = i;
-            MenuButton b = new MenuButton(frame, require("/assets/ui/buttons/labels/label_" + LABELS[i] + ".png"), glow,
-                    LABEL_OFF[i][0], LABEL_OFF[i][1], GLOW_DX, GLOW_DY);
+            MenuButton b = i == 2
+                    ? new MenuButton("ENEMY ARENA", frame.getWidth(), frame.getHeight())
+                    : new MenuButton(frame, require("/assets/ui/buttons/labels/label_" + LABELS[i < 2 ? i : i - 1] + ".png"), glow,
+                    LABEL_OFF[i < 2 ? i : i - 1][0], LABEL_OFF[i < 2 ? i : i - 1][1], GLOW_DX, GLOW_DY);
             // MenuScreen routes keyboard activation centrally to support arrow-key focus.
             b.setKeyboardActivationEnabled(false);
             b.setLayoutX(FRAME_X);
@@ -164,12 +166,16 @@ public final class MenuScreen extends Pane {
         buttons[1].setOnAction(r);
     }
 
-    public void setOnSettings(Runnable r) {
+    public void setOnArena(Runnable r) {
         buttons[2].setOnAction(r);
     }
 
-    public void setOnExit(Runnable r) {
+    public void setOnSettings(Runnable r) {
         buttons[3].setOnAction(r);
+    }
+
+    public void setOnExit(Runnable r) {
+        buttons[4].setOnAction(r);
     }
 
     /** When false, CONTINUE is dimmed and cannot be selected (for example: no save yet). */

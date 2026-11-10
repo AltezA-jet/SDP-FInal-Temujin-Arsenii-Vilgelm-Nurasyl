@@ -27,24 +27,19 @@ public final class GameMenuScreen extends Pane {
     public static final double W=1920,H=1080;
     private static final String[] CLASSES={"WARRIOR","ARCHER","MAGE","ASSASSIN"};
     private static final String[][] SKILLS={
-        {"Whirlwind","Lunge","Crushing Leap","War Cry","Titan's Wrath"},
+        {"Whirlwind","Lunge (HEAVY)","Crushing Leap","War Cry","Titan's Wrath"},
         {"Triple Shot","Poison Arrow","Trap","Hunter's Mark","Arrow Rain"},
         {"Blink","Frost Ring","Chain Lightning","Mana Shield","Meteor"},
-        {"Shadow Strike","Smoke Bomb","Blade Flurry","Execution","Death Dance"}};
+        {"Shadow Strike / INVISIBILITY","Smoke Bomb","Blade Flurry","Execution","Death Dance"}};
     private static final int[] LEVELS={2,3,5,7,8};
     private static final int[][] COSTS={{1,1,2},{1,2,2},{2,2,3},{2,3,3},{3,4,5}};
-    private static final String[][] DESCRIPTIONS={
-        {"Spin in a wide arc, damaging nearby foes.","Dash forward and strike an enemy.","Leap down with a crushing area attack.","Raise your battle cry to empower yourself.","Unleash a devastating titan's attack."},
-        {"Fire a rapid triple arrow volley.","Coat an arrow in poison over time.","Place a trap to hinder approaching foes.","Mark a target to increase your threat against it.","Rain arrows over a broad area."},
-        {"Blink a short distance through shadow.","Release a ring of slowing frost.","Chain lightning between enemies.","Shield yourself with arcane energy.","Call down a meteor on your foes."},
-        {"Dash through a target with a shadow strike.","Vanish briefly in a cloud of smoke.","Unleash a flurry of rapid blade strikes.","Deliver a lethal attack to a weakened foe.","Dance through enemies in a deadly whirlwind."}
-    };
     private static final String[] TABS={"CHARACTER","SKILL TREE","INVENTORY","STATS","SETTINGS","SHOP"};
     private final PlayerCharacter player;
     private final Runnable back;
     private final Inventory inventory;
     private final Consumer<Inventory> openInventory;
     private Consumer<Inventory> openShop = inventory -> { };
+    private Runnable onContinue = () -> { };
     private final CoinWallet wallet;
     private MenuButton shopButton;
     private final List<MenuButton> buttons=new ArrayList<>();
@@ -53,7 +48,6 @@ public final class GameMenuScreen extends Pane {
     private final Label[] skillRankLabels=new Label[4];
     private int selectedClass,selectedSkill=0,selectedTab=1;
     private Label detailTitle,detailBody,points,feedback;
-    private MenuButton learnButton;
     private Label currencyLabel;
 
     public GameMenuScreen(
@@ -150,7 +144,7 @@ public final class GameMenuScreen extends Pane {
         detailBody=label("",1490,322,18,340,175,"#dbc7cf");detailBody.setWrapText(true);detailBody.setTextAlignment(TextAlignment.LEFT);getChildren().add(detailBody);
         line(1480,540,1846,540,"#9b6848",2);
         points=label("",1490,565,18,340,40,"#e9bd71");getChildren().add(points);
-        learnButton=button("LEARN / UPGRADE",1510,727,310,62);learnButton.setOnAction(this::upgradeSelected);buttons.add(learnButton);
+        MenuButton learn=button("UPGRADE / UNLOCK",1510,727,310,62);learn.setOnAction(this::upgradeSelected);buttons.add(learn);
         feedback=label("Select a node in the tree",1490,809,15,350,32,"#bca9bc");getChildren().add(feedback);
     }
     private void drawTree(){
@@ -169,6 +163,7 @@ public final class GameMenuScreen extends Pane {
     private void drawFooter(){
         MenuButton[] classes=new MenuButton[4];for(int i=0;i<4;i++){final int index=i;classes[i]=button(CLASSES[i],574+i*195,922,185,64);classes[i].setOnAction(()->{selectedClass=index;selectedSkill=0;refresh();});buttons.add(classes[i]);}
         labelAt("LMB  Select / Upgrade",46,1022,17,"#cdbac7");labelAt("ESC  Back",1645,1022,17,"#cdbac7");
+        MenuButton next=button("NEXT STAGE",1380,922,220,64);next.setOnAction(()->onContinue.run());buttons.add(next);
         setOnKeyPressed(e->{
             if(e.getCode()==javafx.scene.input.KeyCode.ESCAPE) back.run();
             if(e.getCode()==javafx.scene.input.KeyCode.I) openInventory();
@@ -184,11 +179,13 @@ public final class GameMenuScreen extends Pane {
         if(detailTitle==null)return;
         detailTitle.setText(SKILLS[selectedClass][selectedSkill]);int rank=player.getSkillRank(skillId(selectedSkill));
         int cost=COSTS[selectedSkill][Math.min(rank,2)];
-        boolean learned=rank>0, maxed=rank>=3, levelReady=player.getLevel()>=LEVELS[selectedSkill];
-        String status=maxed?"MAX RANK":learned?"LEARNED":levelReady?"AVAILABLE":"LOCKED — REQUIRES LEVEL "+LEVELS[selectedSkill];
-        detailBody.setText(DESCRIPTIONS[selectedClass][selectedSkill]+"\n\nCurrent Status: "+status+"\nRank: "+rank+" / 3\nRequired Level: "+LEVELS[selectedSkill]+(selectedSkill==4?" (ultimate)":""));
-        points.setText("Cost: "+(maxed?"—":cost+" skill points")+"\nLevel "+player.getLevel()+"   Stat Points: "+player.getStatPoints()+"   Skill Points: "+player.getSkillPoints());
-        learnButton.setEnabled(!maxed && levelReady && player.getSkillPoints()>=cost);
+        String abilityHint = selectedClass==0 && selectedSkill==1
+                ? "\n\nActive ability: E performs a forward heavy strike."
+                : selectedClass==3 && selectedSkill==0
+                ? "\n\nActive ability: E grants temporary invisibility."
+                : "";
+        detailBody.setText("Rank: "+rank+" / 3\n\nUnlock level: "+LEVELS[selectedSkill]+(selectedSkill==4?" (ultimate)":"")+abilityHint+"\n\nEach later rank improves the skill effect by 20% and reduces cooldown by 10%.\n\nNext rank cost: "+cost+" skill points.");
+        points.setText("Level "+player.getLevel()+"     Stat points: "+player.getStatPoints()+"     Skill points: "+player.getSkillPoints());
         for(int i=0;i<4;i++)if(dynamic.size()>=4)dynamic.get(i).setText(new int[]{player.getHealthRank(),player.getAttackRank(),player.getSpeedRank(),player.getResourcesRank()}[i]+" / 12");
         for(int i=0;i<4;i++){skillNodes[i].setText(SKILLS[selectedClass][i]);skillRankLabels[i].setText(player.getSkillRank(CLASSES[selectedClass].toLowerCase(java.util.Locale.ROOT)+"."+i)+" / 3");}
         skillNodes[4].setText(SKILLS[selectedClass][4]);
@@ -206,6 +203,7 @@ public final class GameMenuScreen extends Pane {
     public CoinWallet getWallet(){return wallet;}
     public void refreshWallet(){currencyLabel.setText("◆  "+wallet.getBalance());}
     public void setOnShop(Consumer<Inventory> openShop){this.openShop=openShop==null?inventory->{ }:openShop;}
+    public void setOnContinue(Runnable action){this.onContinue=action==null?()->{ }:action;}
     public void setShopAvailable(boolean available) { shopButton.setDisable(!available); }
     public void openInventory(){openInventory.accept(inventory);}
 }

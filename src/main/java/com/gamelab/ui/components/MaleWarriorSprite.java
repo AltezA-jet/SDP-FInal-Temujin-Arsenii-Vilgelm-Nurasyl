@@ -142,8 +142,10 @@ public final class MaleWarriorSprite extends Pane {
     }
 
     private String weaponVariant() {
-        int level = swordName.contains("ancient") ? 4 : swordName.contains("darksteel") ? 3
-                : swordName.contains("greatsword") ? 2 : swordName.contains("swift") ? 1 : 0;
+        int level = swordName.contains("ancient") || swordName.contains("nature") || swordName.contains("venom") || swordName.contains("dark_bow") ? 4
+                : swordName.contains("darksteel") || swordName.contains("holy") || swordName.contains("shadow") || swordName.contains("long_bow") ? 3
+                : swordName.contains("greatsword") || swordName.contains("dark_staff") || swordName.contains("royal") || swordName.contains("hunter") ? 2
+                : swordName.contains("swift") || swordName.contains("arcane") || swordName.contains("curved") || swordName.contains("light") ? 1 : 0;
         return switch (classId) {
             case "archer" -> new String[]{"start", "light", "hunter", "long", "dark"}[level];
             case "assasin" -> new String[]{"start", "curved", "royal", "shadow", "venom"}[level];

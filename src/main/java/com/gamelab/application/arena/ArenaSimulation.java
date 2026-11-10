@@ -6,6 +6,7 @@ import com.gamelab.application.RuneCombatService;
 import com.gamelab.domain.rune.*;
 import com.gamelab.domain.Enemy;
 import com.gamelab.domain.PlayerCharacter;
+import com.gamelab.domain.progression.Difficulty;
 import com.gamelab.pattern.factory.EnemyFactory;
 import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.pattern.strategy.*;
@@ -90,6 +91,7 @@ public final class ArenaSimulation {
     private final RuneCombatService runeCombat;
     private RuneLoadout loadout;
     private final Random random;
+    private final Difficulty difficulty;
     private final PlatformPhysics physics = new PlatformPhysics();
     private final List<Fighter> fighters = new ArrayList<>();
     private final List<Projectile> projectiles = new ArrayList<>();
@@ -100,9 +102,12 @@ public final class ArenaSimulation {
     private PlayerCombatStrategy playerStrategy = new BalancedStrategy();
     private BehaviorMode mode = BehaviorMode.AUTO;
     private boolean invincible, crouching, facingLeft;
-    private double attackCooldown, dodgeTime, dodgeCooldown, poisonTime, poisonTick, slowTime;
+    private double attackCooldown, dodgeTime, dodgeCooldown, boostTime, boostCooldown;
+    private double invisibilityTime, abilityCooldown, lungeTime, lungeDirection;
+    private double poisonTime, poisonTick, slowTime;
     private double playerHitDelay, playerAttackDuration, playerAttackTime;
     private boolean playerHitPending;
+    private boolean abilityHeavyStrike;
     private int poisonDamage=10;
     private double hitProtection, attackBuffer;
     private double stepDistance;
@@ -116,9 +121,15 @@ public final class ArenaSimulation {
     private double waveDelay;
 
     public ArenaSimulation(PlayerCharacter player, GameEventBus events) {
-        this(player,events,new Random());
+        this(player,events,new Random(),Difficulty.NORMAL);
     }
     public ArenaSimulation(PlayerCharacter player, GameEventBus events, Random random) {
+        this(player,events,random,Difficulty.NORMAL);
+    }
+    public ArenaSimulation(PlayerCharacter player, GameEventBus events, Difficulty difficulty) {
+        this(player,events,new Random(),difficulty);
+    }
+    public ArenaSimulation(PlayerCharacter player, GameEventBus events, Random random, Difficulty difficulty) {
         this.player = Objects.requireNonNull(player);
         String className=player.getCharacterClass().toUpperCase(Locale.ROOT);
         heroController=className.contains("ARCHER") ? new ArcherController(player)
@@ -126,6 +137,7 @@ public final class ArenaSimulation {
                 : new BasicHeroController(player);
         this.events = Objects.requireNonNull(events);
         this.random=Objects.requireNonNull(random);
+        this.difficulty=Objects.requireNonNull(difficulty);
         combat = new CombatService(events);
         runeCombat = new RuneCombatService(combat,random::nextDouble);
         events.subscribe(event -> {
@@ -145,6 +157,7 @@ public final class ArenaSimulation {
         });
     }
     public PlayerCharacter player() { return player; }
+    public Difficulty difficulty() { return difficulty; }
     public HeroController heroController() { return heroController; }
     public Body hero() { return hero; }
     public List<Fighter> fighters() { return Collections.unmodifiableList(fighters); }
@@ -154,6 +167,8 @@ public final class ArenaSimulation {
     public Set<String> defeatedTypes() { return Collections.unmodifiableSet(defeatedTypes); }
     public boolean facingLeft() { return facingLeft; }
     public boolean dodging() { return dodgeTime > 0; }
+    public boolean boosting() { return boostTime > 0; }
+    public boolean invisible() { return invisibilityTime > 0; }
     public boolean crouching() { return crouching; }
     public long attackSerial() { return attackSerial; }
     public boolean poisoned() { return poisonTime > 0; }
@@ -166,9 +181,14 @@ public final class ArenaSimulation {
     public double playerAttackDuration() { return playerAttackDuration; }
     public boolean attacking() { return attackCooldown>0; }
     public double dodgeCooldown() { return dodgeCooldown; }
-    public boolean damageProtected() { return invincible || dodging() || hitProtection>0; }
+    public double boostCooldown() { return boostCooldown; }
+    public double abilityCooldown() { return abilityCooldown; }
+    public boolean damageProtected() { return invincible || dodging() || invisible() || hitProtection>0; }
     public RuneLoadout loadout() { return loadout; }
     public void setLoadout(RuneLoadout value) { loadout=Objects.requireNonNull(value); }
+    public void configureArcherQuiver(int capacity, double refillSeconds) {
+        if (heroController instanceof ArcherController archer) archer.configureQuiver(capacity, refillSeconds);
+    }
     public void setInvincible(boolean value) { invincible = value; }
     public void setPlayerStrategy(PlayerCombatStrategy strategy) { playerStrategy = Objects.requireNonNull(strategy); }
     public void setBehaviorMode(BehaviorMode value) {
@@ -205,7 +225,9 @@ public final class ArenaSimulation {
     public void restorePlayer() {
         heroController.restore();
         hero.x=350; hero.y=FLOOR; hero.velocityY=0; hero.grounded=true;
-        poisonTime=0; poisonTick=0; slowTime=0; attackCooldown=0; dodgeTime=0; dodgeCooldown=0; hitProtection=0; attackBuffer=0; playerHitPending=false;
+        poisonTime=0; poisonTick=0; slowTime=0; attackCooldown=0; dodgeTime=0; dodgeCooldown=0;
+        boostTime=0; boostCooldown=0; invisibilityTime=0; abilityCooldown=0; lungeTime=0;
+        hitProtection=0; attackBuffer=0; playerHitPending=false; abilityHeavyStrike=false;
         stepDistance=0;
     }
 
@@ -215,8 +237,8 @@ public final class ArenaSimulation {
 
     private Fighter spawn(ArenaCatalog.Profile profile, double x, boolean summoned, boolean weakened) {
         Enemy enemy = EnemyFactory.create(profile.type(), "arena-" + (++sequence), x, FLOOR);
-        if(!summoned) enemy=new Enemy(enemy.getId(),profile.name(),ArenaBalance.health(profile,enemy.getMaxHealth()),
-                ArenaBalance.damage(profile,enemy.getDamage()),x,FLOOR,enemy.getMovementSpeed(),enemy.getRewardCoins(),
+        if(!summoned) enemy=new Enemy(enemy.getId(),profile.name(),Math.max(1,(int)Math.round(ArenaBalance.health(profile,enemy.getMaxHealth())*difficulty.healthMultiplier())),
+                Math.max(1,(int)Math.round(ArenaBalance.damage(profile,enemy.getDamage())*difficulty.damageMultiplier())),x,FLOOR,enemy.getMovementSpeed(),enemy.getRewardCoins(),
                 enemy.getRewardExperience(),enemy.getElement(),enemy.isBoss(),enemy.getBehavior());
         if (summoned) enemy = new Enemy(enemy.getId(), profile.name(), Math.max(1, enemy.getMaxHealth()/(weakened?2:1)),
                 Math.max(1, enemy.getDamage()/(weakened?2:1)), x, FLOOR, enemy.getMovementSpeed(), 0, 0,
@@ -250,6 +272,86 @@ public final class ArenaSimulation {
         }
     }
 
+    /** Shift ability: a short acceleration available to every class. */
+    public void boost() {
+        if (player.isAlive() && boostCooldown <= 0) {
+            boostTime = .42;
+            boostCooldown = .85;
+            events.publish("PLAYER_BOOST", "Ускорение");
+        }
+    }
+
+    /** Class ability unlocked in the skill tree and activated with E. */
+    public void useClassAbility() {
+        if (!player.isAlive() || abilityCooldown > 0) return;
+        String classId = heroController.classId().toLowerCase(Locale.ROOT);
+        if (classId.equals("warrior") && player.getSkillRank("warrior.1") > 0) {
+            lungeDirection = facingLeft ? -1 : 1;
+            lungeTime = .24;
+            abilityCooldown = 1.1;
+            abilityHeavyStrike = true;
+            if (attack()) events.publish("PLAYER_LUNGE", "Тяжёлый выпад");
+            else { abilityHeavyStrike = false; lungeTime = 0; abilityCooldown = 0; }
+        } else if (classId.equals("assassin") && player.getSkillRank("assassin.0") > 0) {
+            int cost = Math.max(1, (int)Math.round(20 * (1 - player.getInvisibilityCostReductionPercent() / 100.0)));
+            if (!player.spendMana(cost)) return;
+            invisibilityTime = 2.5;
+            abilityCooldown = 5.0;
+            events.publish("PLAYER_INVISIBLE", "Невидимость");
+        }
+    }
+
+    /** Activates an unlocked class-tree node. The arena maps nodes to keys 1 through 5. */
+    public void useSkill(int slot) {
+        if (slot < 0 || slot > 4 || !player.isAlive() || abilityCooldown > 0) return;
+        String classId = heroController.classId().toLowerCase(Locale.ROOT);
+        int rank = player.getSkillRank(classId + "." + slot);
+        if (rank <= 0) { events.publish("PLAYER_SKILL_LOCKED", "Skill is locked"); return; }
+        double direction = facingLeft ? -1 : 1;
+        abilityCooldown = Math.max(.65, 3.5 - rank * .35);
+        if (classId.equals("archer")) {
+            if (slot == 0) {
+                if (!consumeArcherArrows(3)) return;
+                for (double spread : new double[]{-.18, 0, .18}) spawnPlayerProjectile(direction, spread, 1.0);
+                events.publish("PLAYER_TRIPLE_SHOT", "Triple Shot");
+            } else if (slot == 1) {
+                spawnPlayerProjectile(direction, 0, 1.25); events.publish("PLAYER_POISON_ARROW", "Poison Arrow");
+            } else if (slot == 2) { zones.add(new Zone(hero.x + direction * 100, hero.y, true)); events.publish("PLAYER_TRAP", "Trap"); }
+            else if (slot == 3) { hitProtection = 1.2 + rank * .2; events.publish("PLAYER_MARK", "Hunter's Mark"); }
+            else { if (!consumeArcherArrows(5)) return; for (int i=-2;i<=2;i++) spawnPlayerProjectile(direction, i*.12, .9); events.publish("PLAYER_ARROW_RAIN", "Arrow Rain"); }
+        } else if (classId.equals("mage")) {
+            if (slot == 0) { hero.x=Math.max(40,Math.min(1880,hero.x+direction*240)); events.publish("PLAYER_BLINK", "Blink"); }
+            else if (slot == 1) { fighters.forEach(f->{ if(Math.abs(f.body.x-hero.x)<240) f.slowTime=2+rank; }); events.publish("PLAYER_FROST_RING", "Frost Ring"); }
+            else if (slot == 2) { damageNearby(360, rank * 5 + 8); events.publish("PLAYER_CHAIN_LIGHTNING", "Chain Lightning"); }
+            else if (slot == 3) { hitProtection=2+rank; events.publish("PLAYER_MANA_SHIELD", "Mana Shield"); }
+            else { damageNearby(420, rank * 10 + 15); impacts.add(new Impact(hero.x+direction*180,hero.y-80)); events.publish("PLAYER_METEOR", "Meteor"); }
+        } else if (classId.equals("assassin")) {
+            if (slot == 0) { invisibilityTime=2.5+rank*.5; events.publish("PLAYER_INVISIBLE", "Invisibility"); }
+            else if (slot == 1) { zones.add(new Zone(hero.x,hero.y,true)); events.publish("PLAYER_SMOKE", "Smoke Bomb"); }
+            else if (slot == 2) { damageNearby(170,rank*7+8); events.publish("PLAYER_FLURRY", "Blade Flurry"); }
+            else if (slot == 3) { damageNearby(190,rank*12+12); events.publish("PLAYER_EXECUTION", "Execution"); }
+            else { dodge(direction); events.publish("PLAYER_DEATH_DANCE", "Death Dance"); }
+        } else {
+            if (slot == 0) { damageNearby(190,rank*7+8); events.publish("PLAYER_WHIRLWIND", "Whirlwind"); }
+            else if (slot == 1) { abilityCooldown=0; useClassAbility(); }
+            else if (slot == 2) { jump(); damageNearby(230,rank*8+10); events.publish("PLAYER_LEAP", "Crushing Leap"); }
+            else if (slot == 3) { hitProtection=1+rank*.5; events.publish("PLAYER_WAR_CRY", "War Cry"); }
+            else { damageNearby(300,rank*15+15); events.publish("PLAYER_TITAN_WRATH", "Titan's Wrath"); }
+        }
+    }
+
+    private void damageNearby(double radius, int damage) {
+        for (Fighter fighter : fighters) if (fighter.enemy.isAlive() && Math.hypot(fighter.body.x-hero.x, fighter.body.y-hero.y) <= radius) {
+            combat.damageEnemy(fighter.enemy, damage); recordDeath(fighter);
+        }
+    }
+    private boolean consumeArcherArrows(int amount) {
+        if (!(heroController instanceof ArcherController archer) || archer.consumeArrows(amount)) return true;
+        abilityCooldown = 0;
+        events.publish("PLAYER_ATTACK_BLOCKED", "Not enough arrows");
+        return false;
+    }
+
     public boolean attack() {
         if (!player.isAlive()) return false;
         if (!heroController.canAttack()) {
@@ -262,7 +364,7 @@ public final class ArenaSimulation {
         }
         attackSerial++;
         double speed=(loadout==null ? 1 : loadout.createDecoratedWeapon().getAttackSpeed())*(1+player.getAttackSpeedBonusPercent()/100);
-        playerAttackDuration=(playerStrategy instanceof HeavyAttackStrategy ? .75 : .40)/speed;
+        playerAttackDuration=((playerStrategy instanceof HeavyAttackStrategy || abilityHeavyStrike) ? .75 : .40)/speed;
         attackCooldown=playerAttackDuration;
         playerAttackTime=0; playerHitDelay=playerAttackDuration*.5; playerHitPending=true;
         if (!heroController.beginAttack()) return false;
@@ -282,7 +384,7 @@ public final class ArenaSimulation {
                     && (!ball || hero.y-55>=fighter.body.y-80)
                     && (facingLeft ? dx <= 30 : dx >= -30)) {
                 int dealt;
-                PlayerCombatStrategy effective=playerStrategy;
+                PlayerCombatStrategy effective=abilityHeavyStrike ? new HeavyAttackStrategy() : playerStrategy;
                 if(fighter.profile.attack()==Attack.FINAL && fighter.phase==1 && !hasRune(RuneType.ANCIENT)) {
                     effective=new PlayerCombatStrategy() {
                         public int calculateDamage(PlayerCharacter p) { return (int)Math.round(playerStrategy.calculateDamage(p)*.8); }
@@ -304,11 +406,12 @@ public final class ArenaSimulation {
                 recordDeath(fighter);
             }
         }
+        abilityHeavyStrike=false;
     }
     private boolean isMage() { return heroController.magical(); }
     private boolean isRangedClass() { return heroController.ranged(); }
-    private void spawnPlayerProjectile() {
-        double direction=facingLeft ? -1 : 1;
+    private void spawnPlayerProjectile() { spawnPlayerProjectile(facingLeft ? -1 : 1, 0, 1); }
+    private void spawnPlayerProjectile(double direction, double spread, double damageMultiplier) {
         boolean mage=heroController.magical();
         Fighter target=fighters.stream().filter(f -> f.enemy.isAlive()
                         && (f.body.x-hero.x)*direction>0)
@@ -319,11 +422,11 @@ public final class ArenaSimulation {
         if(target!=null) {
             double targetX=target.body.x;
             double targetY=target.body.y-58;
-            double angle=Math.atan2(targetY-startY,targetX-startX);
+            double angle=Math.atan2(targetY-startY,targetX-startX) + spread;
             vx=Math.cos(angle)*heroController.projectileSpeed();
             vy=Math.sin(angle)*heroController.projectileSpeed();
         }
-        int shotDamage=Math.max(1,playerStrategy.calculateDamage(player));
+        int shotDamage=Math.max(1,(int)Math.round(playerStrategy.calculateDamage(player)*damageMultiplier));
         projectiles.add(new Projectile(startX,startY,vx,vy,
                 heroController.projectileRadius(),shotDamage,false,mage?Attack.FIREBALL:Attack.SHOT,
                 heroController.projectileSource(),true));
@@ -361,13 +464,21 @@ public final class ArenaSimulation {
         }
         dodgeCooldown=Math.max(0,dodgeCooldown-dt);
         dodgeTime=Math.max(0,dodgeTime-dt);
+        boostCooldown=Math.max(0,boostCooldown-dt);
+        boostTime=Math.max(0,boostTime-dt);
+        abilityCooldown=Math.max(0,abilityCooldown-dt);
+        invisibilityTime=Math.max(0,invisibilityTime-dt);
+        lungeTime=Math.max(0,lungeTime-dt);
         crouching=crouch && hero.grounded;
-        if (movement != 0 && !playerHitPending && !dodging()) facingLeft=movement<0;
+        if (lungeTime > 0) facingLeft=lungeDirection<0;
+        else if (movement != 0 && !playerHitPending && !dodging()) facingLeft=movement<0;
         slowTime=Math.max(0,slowTime-dt);
         boolean airborne=!hero.grounded;double fallSpeed=hero.velocityY,previousX=hero.x;
         double controlledSpeed=dodging() ? (facingLeft ? -640 : 640)
+                : lungeTime > 0 ? lungeDirection * 900
                 : playerHitPending ? 0
-                : movement==0 ? 0 : Math.copySign(heroController.movementSpeed(crouching,slowed(),attackCooldown>0,false),movement);
+                : movement==0 ? 0 : Math.copySign(heroController.movementSpeed(crouching,slowed(),attackCooldown>0,false)
+                * (boosting() ? 1.8 : 1),movement);
         physics.step(hero,controlledSpeed,24,dt,platforms);
         if(airborne && hero.grounded && fallSpeed>180) events.publish("PLAYER_LANDED","Приземление");
         if(!airborne && hero.grounded && !dodging() && Math.abs(controlledSpeed)>1) {

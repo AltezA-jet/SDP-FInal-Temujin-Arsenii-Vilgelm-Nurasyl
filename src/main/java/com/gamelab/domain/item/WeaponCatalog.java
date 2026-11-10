@@ -95,4 +95,29 @@ public final class WeaponCatalog {
                 createAncientBlade()
         );
     }
+
+    /** Class-specific weapons used for a new run and the shop. */
+    public static Weapon createStarterWeapon(String characterClass) { return createForClass(characterClass, 1); }
+
+    public static List<Weapon> createUpgradesForClass(String characterClass) {
+        return List.of(createForClass(characterClass, 1), createForClass(characterClass, 2),
+                createForClass(characterClass, 3), createForClass(characterClass, 4), createForClass(characterClass, 5));
+    }
+
+    private static Weapon createForClass(String characterClass, int level) {
+        String value = characterClass == null ? "" : characterClass.toUpperCase(java.util.Locale.ROOT);
+        if (value.contains("ARCHER")) return new BasicWeapon(
+                new String[]{"Recruit Bow", "Light Bow", "Hunter Bow", "Long Bow", "Dark Bow"}[level-1],
+                "A bow upgrade for the archer.", new int[]{0,120,220,350,500}[level-1], "ARCHER",
+                new int[]{10,12,18,21,26}[level-1], new double[]{1,1.35,.8,1,1.1}[level-1], Math.min(4,level), level);
+        if (value.contains("MAGE")) return new BasicWeapon(
+                new String[]{"Starter Staff", "Arcane Staff", "Dark Staff", "Holy Staff", "Nature Staff"}[level-1],
+                "A staff upgrade for the mage.", new int[]{0,120,220,350,500}[level-1], "MAGE",
+                new int[]{10,12,18,21,26}[level-1], new double[]{1,1.35,.8,1,1.1}[level-1], Math.min(4,level), level);
+        if (value.contains("ASSASSIN")) return new BasicWeapon(
+                new String[]{"Starter Daggers", "Curved Daggers", "Royal Daggers", "Shadow Daggers", "Venom Daggers"}[level-1],
+                "A dagger upgrade for the assassin.", new int[]{0,120,220,350,500}[level-1], "ASSASSIN",
+                new int[]{10,12,18,21,26}[level-1], new double[]{1,1.35,.8,1,1.1}[level-1], Math.min(4,level), level);
+        return createByLevel(level);
+    }
 }

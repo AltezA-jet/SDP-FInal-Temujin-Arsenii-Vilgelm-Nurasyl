@@ -6,6 +6,7 @@ import com.gamelab.domain.Item;
 import com.gamelab.domain.inventory.Inventory;
 import com.gamelab.domain.item.Potion;
 import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.item.QuiverUpgrade;
 import com.gamelab.domain.rune.Rune;
 import com.gamelab.domain.rune.RuneLoadout;
 import com.gamelab.ui.ShadowfallUi;
@@ -72,7 +73,7 @@ public final class InventoryController {
     private final TilePane runeSlots = new TilePane();
     private final VBox detailsPanel = new VBox(12);
     private final Label capacityLabel = new Label();
-    private final Label statusLabel = new Label("Select an item");
+    private final Label statusLabel = new Label("Выберите предмет");
     private final MenuButton[] filterButtons = new MenuButton[4];
 
     private Filter filter = Filter.ALL;
@@ -120,7 +121,7 @@ public final class InventoryController {
         root.setStyle(FRAME_STYLE);
         resetStatus();
 
-        Label title = new Label("INVENTORY");
+        Label title = new Label("ИНВЕНТАРЬ");
         title.setStyle(
                 "-fx-text-fill:#f6cf7a;"
                         + "-fx-font-family:'Monospaced';"
@@ -160,7 +161,7 @@ public final class InventoryController {
 
         HBox filters = new HBox(10);
         filters.setAlignment(Pos.CENTER);
-        String[] names = {"ALL", "WEAPONS", "RUNES", "CONSUMABLES"};
+        String[] names = {"ВСЕ", "ОРУЖИЕ", "РУНЫ", "РАСХОДНИКИ"};
         Filter[] values = Filter.values();
 
         for (int index = 0; index < names.length; index++) {
@@ -218,9 +219,9 @@ public final class InventoryController {
                         + "-fx-font-weight:bold;"
         );
 
-        Label damage = infoLabel("Damage: +" + decoratedWeapon.getDamageBonus());
-        Label speed = infoLabel(String.format("Attack Speed: %.2f", decoratedWeapon.getAttackSpeed()));
-        Label level = infoLabel("Level: " + decoratedWeapon.getUpgradeLevel() + "/5");
+        Label damage = infoLabel("Урон: +" + decoratedWeapon.getDamageBonus());
+        Label speed = infoLabel(String.format("Скорость: %.2f", decoratedWeapon.getAttackSpeed()));
+        Label level = infoLabel("Уровень: " + decoratedWeapon.getUpgradeLevel() + "/5");
 
         runeSlots.setAlignment(Pos.CENTER);
         runeSlots.setPadding(new Insets(6, 0, 0, 0));
@@ -229,14 +230,14 @@ public final class InventoryController {
         runeSlots.setVgap(12);
 
         weaponPanel.getChildren().setAll(
-                sectionLabel("EQUIPPED SWORD"),
+                sectionLabel("ЭКИПИРОВАННОЕ ОРУЖИЕ"),
                 createImageView(baseWeapon, 128),
                 weaponName,
                 damage,
                 speed,
                 level,
                 divider(),
-                sectionLabel("RUNE SLOTS"),
+                sectionLabel("СЛОТЫ РУН"),
                 runeSlots
         );
     }
@@ -279,7 +280,7 @@ public final class InventoryController {
     private VBox createEmptyInventorySlot() {
         Label symbol = new Label("✦");
         symbol.setStyle("-fx-text-fill:#3f3348;-fx-font-size:22px;");
-        Label text = new Label("EMPTY");
+        Label text = new Label("ПУСТО");
         text.setStyle(
                 "-fx-text-fill:#665a70;"
                         + "-fx-font-family:'Monospaced';"
@@ -327,7 +328,7 @@ public final class InventoryController {
     private VBox createEmptyRuneSlot() {
         Label symbol = new Label("+");
         symbol.setStyle("-fx-text-fill:#776b86;-fx-font-size:30px;");
-        Label text = new Label("EMPTY SLOT");
+        Label text = new Label("ПУСТОЙ СЛОТ");
         text.setStyle(
                 "-fx-text-fill:#776b86;"
                         + "-fx-font-family:'Monospaced';"
@@ -345,10 +346,10 @@ public final class InventoryController {
         detailsPanel.getChildren().clear();
 
         if (selectedItem == null) {
-            Label hint = infoLabel("Select an item in your inventory or an equipped rune.");
+            Label hint = infoLabel("Выберите предмет в инвентаре или установленную руну.");
             hint.setWrapText(true);
             hint.setAlignment(Pos.CENTER);
-            detailsPanel.getChildren().addAll(sectionLabel("ITEM DETAILS"), hint, statusLabel);
+            detailsPanel.getChildren().addAll(sectionLabel("СВЕДЕНИЯ О ПРЕДМЕТЕ"), hint, statusLabel);
             return;
         }
 
@@ -377,7 +378,7 @@ public final class InventoryController {
 
         if (selectedItem instanceof Rune rune) {
             boolean installed = isInstalled(rune);
-            Label state = new Label(installed ? "EQUIPPED IN SWORD" : "IN INVENTORY");
+            Label state = new Label(installed ? "УСТАНОВЛЕНА В ОРУЖИЕ" : "НАХОДИТСЯ В ИНВЕНТАРЕ");
             state.setWrapText(true);
             state.setAlignment(Pos.CENTER);
             state.setMaxWidth(270);
@@ -390,7 +391,7 @@ public final class InventoryController {
             );
 
             MenuButton action = new MenuButton(
-                    installed ? "REMOVE RUNE" : "INSTALL IN SWORD",
+                    installed ? "СНЯТЬ РУНУ" : "УСТАНОВИТЬ В ОРУЖИЕ",
                     250,
                     58
             );
@@ -398,23 +399,26 @@ public final class InventoryController {
             detailsPanel.getChildren().addAll(state, action);
         } else if (selectedItem instanceof Weapon weapon) {
             detailsPanel.getChildren().addAll(
-                    infoLabel("Damage: +" + weapon.getDamageBonus()),
-                    infoLabel(String.format("Attack Speed: %.2f", weapon.getAttackSpeed())),
-                    infoLabel("Rune Slots: " + weapon.getRuneSlotCount())
+                    infoLabel("Урон: +" + weapon.getDamageBonus()),
+                    infoLabel(String.format("Скорость: %.2f", weapon.getAttackSpeed())),
+                    infoLabel("Слоты рун: " + weapon.getRuneSlotCount())
             );
-            MenuButton equip=new MenuButton(loadout.getWeapon()==weapon?"EQUIPPED":"EQUIP",250,58);
+            MenuButton equip=new MenuButton(loadout.getWeapon()==weapon?"ЭКИПИРОВАНО":"ЭКИПИРОВАТЬ",250,58);
             equip.setDisable(loadout.getWeapon()==weapon);
             equip.setOnAction(() -> {
                 try {
-                    if(!weapon.canBeUsedBy(characterClass)) throw new IllegalArgumentException("This class cannot use that weapon");
+                    if(!weapon.canBeUsedBy(characterClass)) throw new IllegalArgumentException("Оружие недоступно этому классу");
                     loadout.changeWeapon(weapon);inventory.equipWeapon(weapon,characterClass);
-                    showResult(RuneActionResult.successful("Sword equipped"));
+                    showResult(RuneActionResult.successful("Оружие экипировано"));
                 } catch(IllegalArgumentException|IllegalStateException ex) { showResult(RuneActionResult.failed(ex.getMessage())); }
                 refresh();
             });
             detailsPanel.getChildren().add(equip);
+        } else if (selectedItem instanceof QuiverUpgrade upgrade) {
+            detailsPanel.getChildren().addAll(infoLabel("Колчан: " + upgrade.capacity() + " стрел"),
+                    infoLabel(String.format("Восстановление: %.1f с", upgrade.refillSeconds())));
         } else if (selectedItem instanceof Potion) {
-            Label useHint = infoLabel("Potions can be used during combat.");
+            Label useHint = infoLabel("Зелье используется во время боя.");
             useHint.setWrapText(true);
             useHint.setAlignment(Pos.CENTER);
             detailsPanel.getChildren().add(useHint);
@@ -443,7 +447,7 @@ public final class InventoryController {
     private boolean matchesFilter(Item item) {
         return switch (filter) {
             case ALL -> true;
-            case WEAPONS -> item instanceof Weapon;
+            case WEAPONS -> item instanceof Weapon || item instanceof QuiverUpgrade;
             case RUNES -> item instanceof Rune;
             case CONSUMABLES -> item instanceof Potion;
         };
@@ -520,16 +524,7 @@ public final class InventoryController {
     }
 
     private String displayName(Item item) {
-        if (item instanceof Weapon weapon) {
-            return switch (weapon.getUpgradeLevel()) {
-                case 1 -> "СТАРТОВЫЙ МЕЧ";
-                case 2 -> "БЫСТРЫЙ КЛИНОК";
-                case 3 -> "ДВУРУЧНЫЙ МЕЧ";
-                case 4 -> "МЕЧ ИЗ ТЁМНОЙ СТАЛИ";
-                case 5 -> "ДРЕВНИЙ КЛИНОК";
-                default -> weapon.getName().toUpperCase();
-            };
-        }
+        if (item instanceof Weapon weapon) return weapon.getName().toUpperCase();
 
         if (item instanceof Rune rune) {
             return switch (rune.getRuneType()) {
