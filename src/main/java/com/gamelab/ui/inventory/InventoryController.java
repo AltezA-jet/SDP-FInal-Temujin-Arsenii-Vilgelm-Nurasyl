@@ -72,7 +72,7 @@ public final class InventoryController {
     private final TilePane runeSlots = new TilePane();
     private final VBox detailsPanel = new VBox(12);
     private final Label capacityLabel = new Label();
-    private final Label statusLabel = new Label("Выберите предмет");
+    private final Label statusLabel = new Label("Select an item");
     private final MenuButton[] filterButtons = new MenuButton[4];
 
     private Filter filter = Filter.ALL;
@@ -120,7 +120,7 @@ public final class InventoryController {
         root.setStyle(FRAME_STYLE);
         resetStatus();
 
-        Label title = new Label("ИНВЕНТАРЬ");
+        Label title = new Label("INVENTORY");
         title.setStyle(
                 "-fx-text-fill:#f6cf7a;"
                         + "-fx-font-family:'Monospaced';"
@@ -160,7 +160,7 @@ public final class InventoryController {
 
         HBox filters = new HBox(10);
         filters.setAlignment(Pos.CENTER);
-        String[] names = {"ВСЕ", "ОРУЖИЕ", "РУНЫ", "РАСХОДНИКИ"};
+        String[] names = {"ALL", "WEAPONS", "RUNES", "CONSUMABLES"};
         Filter[] values = Filter.values();
 
         for (int index = 0; index < names.length; index++) {
@@ -218,9 +218,9 @@ public final class InventoryController {
                         + "-fx-font-weight:bold;"
         );
 
-        Label damage = infoLabel("Урон: +" + decoratedWeapon.getDamageBonus());
-        Label speed = infoLabel(String.format("Скорость: %.2f", decoratedWeapon.getAttackSpeed()));
-        Label level = infoLabel("Уровень: " + decoratedWeapon.getUpgradeLevel() + "/5");
+        Label damage = infoLabel("Damage: +" + decoratedWeapon.getDamageBonus());
+        Label speed = infoLabel(String.format("Attack Speed: %.2f", decoratedWeapon.getAttackSpeed()));
+        Label level = infoLabel("Level: " + decoratedWeapon.getUpgradeLevel() + "/5");
 
         runeSlots.setAlignment(Pos.CENTER);
         runeSlots.setPadding(new Insets(6, 0, 0, 0));
@@ -229,14 +229,14 @@ public final class InventoryController {
         runeSlots.setVgap(12);
 
         weaponPanel.getChildren().setAll(
-                sectionLabel("ЭКИПИРОВАННЫЙ МЕЧ"),
+                sectionLabel("EQUIPPED SWORD"),
                 createImageView(baseWeapon, 128),
                 weaponName,
                 damage,
                 speed,
                 level,
                 divider(),
-                sectionLabel("СЛОТЫ РУН"),
+                sectionLabel("RUNE SLOTS"),
                 runeSlots
         );
     }
@@ -279,7 +279,7 @@ public final class InventoryController {
     private VBox createEmptyInventorySlot() {
         Label symbol = new Label("✦");
         symbol.setStyle("-fx-text-fill:#3f3348;-fx-font-size:22px;");
-        Label text = new Label("ПУСТО");
+        Label text = new Label("EMPTY");
         text.setStyle(
                 "-fx-text-fill:#665a70;"
                         + "-fx-font-family:'Monospaced';"
@@ -327,7 +327,7 @@ public final class InventoryController {
     private VBox createEmptyRuneSlot() {
         Label symbol = new Label("+");
         symbol.setStyle("-fx-text-fill:#776b86;-fx-font-size:30px;");
-        Label text = new Label("ПУСТОЙ СЛОТ");
+        Label text = new Label("EMPTY SLOT");
         text.setStyle(
                 "-fx-text-fill:#776b86;"
                         + "-fx-font-family:'Monospaced';"
@@ -345,10 +345,10 @@ public final class InventoryController {
         detailsPanel.getChildren().clear();
 
         if (selectedItem == null) {
-            Label hint = infoLabel("Выберите предмет в инвентаре или установленную руну.");
+            Label hint = infoLabel("Select an item in your inventory or an equipped rune.");
             hint.setWrapText(true);
             hint.setAlignment(Pos.CENTER);
-            detailsPanel.getChildren().addAll(sectionLabel("СВЕДЕНИЯ О ПРЕДМЕТЕ"), hint, statusLabel);
+            detailsPanel.getChildren().addAll(sectionLabel("ITEM DETAILS"), hint, statusLabel);
             return;
         }
 
@@ -377,7 +377,7 @@ public final class InventoryController {
 
         if (selectedItem instanceof Rune rune) {
             boolean installed = isInstalled(rune);
-            Label state = new Label(installed ? "УСТАНОВЛЕНА В МЕЧ" : "НАХОДИТСЯ В ИНВЕНТАРЕ");
+            Label state = new Label(installed ? "EQUIPPED IN SWORD" : "IN INVENTORY");
             state.setWrapText(true);
             state.setAlignment(Pos.CENTER);
             state.setMaxWidth(270);
@@ -390,7 +390,7 @@ public final class InventoryController {
             );
 
             MenuButton action = new MenuButton(
-                    installed ? "СНЯТЬ РУНУ" : "УСТАНОВИТЬ В МЕЧ",
+                    installed ? "REMOVE RUNE" : "INSTALL IN SWORD",
                     250,
                     58
             );
@@ -398,23 +398,23 @@ public final class InventoryController {
             detailsPanel.getChildren().addAll(state, action);
         } else if (selectedItem instanceof Weapon weapon) {
             detailsPanel.getChildren().addAll(
-                    infoLabel("Урон: +" + weapon.getDamageBonus()),
-                    infoLabel(String.format("Скорость: %.2f", weapon.getAttackSpeed())),
-                    infoLabel("Слоты рун: " + weapon.getRuneSlotCount())
+                    infoLabel("Damage: +" + weapon.getDamageBonus()),
+                    infoLabel(String.format("Attack Speed: %.2f", weapon.getAttackSpeed())),
+                    infoLabel("Rune Slots: " + weapon.getRuneSlotCount())
             );
-            MenuButton equip=new MenuButton(loadout.getWeapon()==weapon?"ЭКИПИРОВАНО":"ЭКИПИРОВАТЬ",250,58);
+            MenuButton equip=new MenuButton(loadout.getWeapon()==weapon?"EQUIPPED":"EQUIP",250,58);
             equip.setDisable(loadout.getWeapon()==weapon);
             equip.setOnAction(() -> {
                 try {
-                    if(!weapon.canBeUsedBy(characterClass)) throw new IllegalArgumentException("Оружие недоступно этому классу");
+                    if(!weapon.canBeUsedBy(characterClass)) throw new IllegalArgumentException("This class cannot use that weapon");
                     loadout.changeWeapon(weapon);inventory.equipWeapon(weapon,characterClass);
-                    showResult(RuneActionResult.successful("Меч экипирован"));
+                    showResult(RuneActionResult.successful("Sword equipped"));
                 } catch(IllegalArgumentException|IllegalStateException ex) { showResult(RuneActionResult.failed(ex.getMessage())); }
                 refresh();
             });
             detailsPanel.getChildren().add(equip);
         } else if (selectedItem instanceof Potion) {
-            Label useHint = infoLabel("Зелье используется во время боя.");
+            Label useHint = infoLabel("Potions can be used during combat.");
             useHint.setWrapText(true);
             useHint.setAlignment(Pos.CENTER);
             detailsPanel.getChildren().add(useHint);

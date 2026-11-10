@@ -43,9 +43,42 @@
     -fx-background-radius: 4;
     -fx-cursor: hand;
 }
+.sf-root .button {
+    -fx-background-color: #30283f;
+    -fx-text-fill: #f4e7cf;
+    -fx-font-family: "Monospaced";
+    -fx-font-weight: bold;
+    -fx-border-color: #8b6f47;
+    -fx-border-width: 2;
+    -fx-background-radius: 2;
+    -fx-border-radius: 2;
+    -fx-padding: 10 24;
+    -fx-cursor: hand;
+}
+.sf-root .button:hover {
+    -fx-background-color: #493b50;
+    -fx-border-color: #e0bb72;
+}
+.sf-root .button:pressed {
+    -fx-background-color: #17121c;
+    -fx-translate-y: 1;
+}
+.sf-root .button:disabled {
+    -fx-opacity: 0.48;
+    -fx-cursor: default;
+}
 .sf-button:hover {
     -fx-background-color: #493b50;
     -fx-border-color: #e0bb72;
+}
+.sf-button:pressed {
+    -fx-background-color: #17121c;
+    -fx-border-color: #b9874e;
+    -fx-translate-y: 1;
+}
+.sf-button:disabled {
+    -fx-opacity: 0.48;
+    -fx-cursor: default;
 }
 .sf-item {
     -fx-background-color: rgba(48, 40, 63, 0.96);

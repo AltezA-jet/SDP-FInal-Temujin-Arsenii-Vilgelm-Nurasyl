@@ -63,7 +63,7 @@ public final class InventoryScreen extends Pane {
         view.setPrefSize(1560, 820);
         view.setMaxSize(1560, 820);
 
-        MenuButton back = new MenuButton("НАЗАД", 220, 58);
+        MenuButton back = new MenuButton("BACK", 220, 58);
         back.relocate(850, 940); back.setOnAction(onBack);
         setOnKeyPressed(event -> { if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) onBack.run(); });
         setFocusTraversable(true);
@@ -71,3 +71,4 @@ public final class InventoryScreen extends Pane {
         requestFocus();
     }
 }
+

@@ -106,15 +106,15 @@ public final class TutorialLevelScreen extends Pane {
         taskCard.setEffect(new DropShadow(18, Color.rgb(0, 0, 0, .65)));
         controlsCard.setEffect(new DropShadow(18, Color.rgb(0, 0, 0, .65)));
 
-        Label title = label("ЭТАП 0  //  ТРЕНИРОВОЧНЫЙ ЛАГЕРЬ", 19,
+        Label title = label("STAGE 0  //  TRAINING GROUNDS", 19,
                 492, 20, 430, 28, "#f6c66d");
-        Label subtitle = label("4 ДЕЙСТВИЯ ОТКРОЮТ ПУТЬ", 11,
+        Label subtitle = label("COMPLETE 4 ACTIONS TO PROCEED", 11,
                 888, 22, 246, 24, "#d5b98c");
         subtitle.setAlignment(Pos.CENTER_RIGHT);
 
-        Label controlsTitle = label("УПРАВЛЕНИЕ", 18,
+        Label controlsTitle = label("CONTROLS", 18,
                 1192, 20, 180, 28, "#f6c66d");
-        Label controlsHint = label("КЛАВИАТУРА  /  МЫШЬ", 11,
+        Label controlsHint = label("KEYBOARD  /  MOUSE", 11,
                 1644, 22, 222, 24, "#d5b98c");
         controlsHint.setAlignment(Pos.CENTER_RIGHT);
 
@@ -125,10 +125,10 @@ public final class TutorialLevelScreen extends Pane {
         keys.getColumnConstraints().addAll(
                 new ColumnConstraints(100), new ColumnConstraints(116),
                 new ColumnConstraints(116), new ColumnConstraints(112));
-        addControlPair(keys, 0, 0, "A / D", "ХОДЬБА");
-        addControlPair(keys, 0, 2, "W / SPACE", "ПРЫЖОК");
-        addControlPair(keys, 1, 0, "S", "ПРИСЯД");
-        addControlPair(keys, 1, 2, "J / ЛКМ", "УДАР");
+        addControlPair(keys, 0, 0, "A / D", "MOVE");
+        addControlPair(keys, 0, 2, "W / SPACE", "JUMP");
+        addControlPair(keys, 1, 0, "S", "CROUCH");
+        addControlPair(keys, 1, 2, "J / LEFT MOUSE", "ATTACK");
 
         tutorialHints.getChildren().addAll(
                 taskCard, controlsCard, title, subtitle, objective, progress,
@@ -137,9 +137,9 @@ public final class TutorialLevelScreen extends Pane {
 
         Rectangle completeCard = panel(610, 910, 700, 126);
         completeCard.setEffect(new DropShadow(24, Color.rgb(0, 0, 0, .72)));
-        Label completeText = label("✓ ТРЕНИРОВКА ЗАВЕРШЕНА", 19, 650, 920, 620, 30, "#f6c66d");
+        Label completeText = label("✓ TRAINING COMPLETE", 19, 650, 920, 620, 30, "#f6c66d");
         completeText.setAlignment(Pos.CENTER);
-        MenuButton next = new MenuButton("ПЕРЕЙТИ В ЛОКАЦИЮ 1", 420, 62);
+        MenuButton next = new MenuButton("ENTER LOCATION 1", 420, 62);
         next.relocate(750, 958);
         next.setOnAction(() -> { timer.stop(); onComplete.run(); });
         completionHud.getChildren().addAll(completeCard, completeText, next);
@@ -204,10 +204,10 @@ public final class TutorialLevelScreen extends Pane {
     private void action(String name) { if (!done.get(name)) { done.put(name, true); refreshHud(); } }
 
     private void refreshHud() {
-        String current = done.get("walk") ? done.get("jump") ? done.get("crouch") ? done.get("attack") ? "Готово! Вход в локацию открыт." : "Теперь ударь (J / ЛКМ)" : "Теперь присядь (S)" : "Теперь прыгни (W / SPACE)" : "Начни с ходьбы (A / D)";
-        objective.setText("ТЕКУЩЕЕ ЗАДАНИЕ\n" + current);
-        progress.setText("ХОДЬБА " + mark("walk") + "   ПРЫЖОК " + mark("jump")
-                + "\nПРИСЯД " + mark("crouch") + "   УДАР   " + mark("attack"));
+        String current = done.get("walk") ? done.get("jump") ? done.get("crouch") ? done.get("attack") ? "Complete! The passage is open." : "Now attack (J / LEFT MOUSE)" : "Now crouch (S)" : "Now jump (W / SPACE)" : "Start by moving (A / D)";
+        objective.setText("CURRENT OBJECTIVE\n" + current);
+        progress.setText("MOVE " + mark("walk") + "   JUMP " + mark("jump")
+                + "\nCROUCH " + mark("crouch") + "   ATTACK " + mark("attack"));
         if (done.values().stream().allMatch(Boolean::booleanValue) && !nextButtonAdded) {
             nextButtonAdded = true;
             showCompletionHud();
