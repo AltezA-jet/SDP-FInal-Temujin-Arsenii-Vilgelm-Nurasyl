@@ -1,6 +1,7 @@
 package com.gamelab.ui.character;
 
 import com.gamelab.domain.PlayerCharacter;
+import com.gamelab.domain.progression.Difficulty;
 import com.gamelab.ui.components.MenuButton;
 import com.gamelab.ui.components.MaleWarriorSprite;
 import javafx.animation.AnimationTimer;
@@ -21,6 +22,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
 
 import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 /** SHADOWFALL character forge. Empty framed slots are deliberate insertion points for future sprites. */
 public final class CharacterCreationScreen extends Pane {
@@ -54,17 +56,17 @@ public final class CharacterCreationScreen extends Pane {
     private static final String[] OUTFIT_COLOR_NAMES = {"СИНИЙ", "КОРИЧНЕВЫЙ", "ЗЕЛЁНЫЙ", "СЕРЫЙ", "ФИОЛЕТОВЫЙ"};
     private static final Color GOLD = Color.web("#f2c66d"), DIM = Color.web("#9c784e"), TEXT = Color.web("#dfd4c1");
 
-    private final Consumer<PlayerCharacter> onCreate;
+    private final BiConsumer<PlayerCharacter, Difficulty> onCreate;
     private final Runnable onBack;
     private final Canvas scene = new Canvas(W, H), fx = new Canvas(W, H);
     private final MaleWarriorSprite warriorPreview = new MaleWarriorSprite(PREVIEW_SIZE);
     private final Ellipse previewShadow = new Ellipse(45, 9);
-    private final MenuButton[] classButtons = new MenuButton[4], genderButtons = new MenuButton[2], colorButtons = new MenuButton[7], shirtButtons = new MenuButton[5], pantsButtons = new MenuButton[5], bootsButtons = new MenuButton[5], headwearButtons = new MenuButton[6];
+    private final MenuButton[] classButtons = new MenuButton[4], difficultyButtons = new MenuButton[3], colorButtons = new MenuButton[7], shirtButtons = new MenuButton[5], pantsButtons = new MenuButton[5], bootsButtons = new MenuButton[5], headwearButtons = new MenuButton[6];
     private final java.util.List<MenuButton> menuButtons = new java.util.ArrayList<>();
     private final Label description = new Label(), stats = new Label(), notice = new Label();
     private final Label hairColorValue = new Label(), shirtColorValue = new Label(), pantsColorValue = new Label(), bootsColorValue = new Label(), headwearColorValue = new Label();
     private final TextField name = new TextField("Герой");
-    private int selectedClass, gender, color, shirtColor, pantsColor, bootsColor, headwear = -1;
+    private int selectedClass, selectedDifficulty = 1, color, shirtColor, pantsColor, bootsColor, headwear = -1;
     private double time;
     private long last;
     private final AnimationTimer animation = new AnimationTimer() {
@@ -77,7 +79,11 @@ public final class CharacterCreationScreen extends Pane {
     };
 
     public CharacterCreationScreen(Consumer<PlayerCharacter> onCreate, Runnable onBack) {
-        this.onCreate = player -> { player.setAppearance(color, shirtColor, pantsColor, bootsColor, headwear); animation.stop(); onCreate.accept(player); }; this.onBack = onBack;
+        this((player, difficulty) -> onCreate.accept(player), onBack);
+    }
+
+    public CharacterCreationScreen(BiConsumer<PlayerCharacter, Difficulty> onCreate, Runnable onBack) {
+        this.onCreate = (player, difficulty) -> { player.setAppearance(color, shirtColor, pantsColor, bootsColor, headwear); animation.stop(); onCreate.accept(player, difficulty); }; this.onBack = onBack;
         setPrefSize(W, H); setMinSize(W, H); setMaxSize(W, H); setClip(new Rectangle(W, H));
         drawWorld(); fx.setMouseTransparent(true); getChildren().addAll(scene, fx);
         build(); refresh(); animation.start();
@@ -123,9 +129,9 @@ public final class CharacterCreationScreen extends Pane {
         getChildren().add(warriorPreview);
         Label centerNote = label("THE VEIL OPENS TO THOSE WHO CHOOSE", 13, "#c09a62"); centerNote.setLayoutX(690); centerNote.setLayoutY(868); centerNote.setPrefWidth(540); centerNote.setAlignment(Pos.CENTER); getChildren().add(centerNote);
 
-        Label genderTitle=label("GENDER",14,"#edcf8c");genderTitle.setLayoutX(1464);genderTitle.setLayoutY(221);getChildren().add(genderTitle);
-        String[] genders={"MALE","FEMALE"};
-        for(int i=0;i<2;i++){final int n=i;MenuButton b=imageButton("/assets/ui/buttons/labels/label_"+genders[i].toLowerCase()+".png",()->{gender=n;refresh();},170,47);b.setLayoutX(1464+i*185);b.setLayoutY(248);genderButtons[i]=b;getChildren().add(b);}
+        Label difficultyTitle=label("DIFFICULTY",14,"#edcf8c");difficultyTitle.setLayoutX(1464);difficultyTitle.setLayoutY(221);getChildren().add(difficultyTitle);
+        String[] difficulties={"EASY","NORMAL","HARD"};
+        for(int i=0;i<3;i++){final int n=i;MenuButton b=slot(()->{selectedDifficulty=n;refresh();},104,47);b.setText(difficulties[i]);b.setLayoutX(1464+i*119);b.setLayoutY(248);difficultyButtons[i]=b;getChildren().add(b);}
 
         appearanceCard(1464, 310, 354, 88);
         Label colors=label("01  ВОЛОСЫ",13,"#edcf8c");colors.setLayoutX(1480);colors.setLayoutY(322);getChildren().add(colors);
@@ -175,7 +181,7 @@ public final class CharacterCreationScreen extends Pane {
 
     private void refresh(){
         for(int i=0;i<4;i++)classButtons[i].setSelected(i==selectedClass);
-        for(int i=0;i<2;i++)genderButtons[i].setSelected(i==gender);
+        for(int i=0;i<3;i++)difficultyButtons[i].setSelected(i==selectedDifficulty);
         for(int i=0;i<7;i++)colorButtons[i].setSelected(i==color);
         for(int i=0;i<5;i++)shirtButtons[i].setSelected(i==shirtColor);
         for(int i=0;i<5;i++)pantsButtons[i].setSelected(i==pantsColor);
@@ -193,7 +199,7 @@ public final class CharacterCreationScreen extends Pane {
         warriorPreview.setConfiguration(color, shirtColor, pantsColor, bootsColor, headwear);
     }
 
-    private void createCharacter(){String n=name.getText()==null?"":name.getText().trim();if(n.isEmpty()){notice.setText("Введите имя героя, прежде чем начать путь.");name.requestFocus();return;}if(n.length()>24){notice.setText("Имя должно содержать не более 24 символов.");return;}PlayerCharacter player=new PlayerCharacter(n,CLASSES[selectedClass],STATS[selectedClass][0]+60,STATS[selectedClass][4]/5,selectedClass==0?12:selectedClass==2?2:3);String hat=headwear<0?"БЕЗ УБОРА":OUTFIT_COLOR_NAMES[headwear];notice.setText(n+" · "+CLASSES[selectedClass]+" · ВЕРХ: "+OUTFIT_COLOR_NAMES[shirtColor]+" · БРЮКИ: "+OUTFIT_COLOR_NAMES[pantsColor]+" · БОТИНКИ: "+OUTFIT_COLOR_NAMES[bootsColor]+" · УБОР: "+hat);onCreate.accept(player);}
+    private void createCharacter(){String n=name.getText()==null?"":name.getText().trim();if(n.isEmpty()){notice.setText("Введите имя героя, прежде чем начать путь.");name.requestFocus();return;}if(n.length()>24){notice.setText("Имя должно содержать не более 24 символов.");return;}PlayerCharacter player=new PlayerCharacter(n,CLASSES[selectedClass],STATS[selectedClass][0]+60,STATS[selectedClass][4]/5,selectedClass==0?12:selectedClass==2?2:3);String hat=headwear<0?"БЕЗ УБОРА":OUTFIT_COLOR_NAMES[headwear];Difficulty difficulty=Difficulty.values()[selectedDifficulty];notice.setText(n+" · "+CLASSES[selectedClass]+" · "+difficulty+" · ВЕРХ: "+OUTFIT_COLOR_NAMES[shirtColor]+" · БРЮКИ: "+OUTFIT_COLOR_NAMES[pantsColor]+" · БОТИНКИ: "+OUTFIT_COLOR_NAMES[bootsColor]+" · УБОР: "+hat);onCreate.accept(player,difficulty);}
     private void panel(double x,double y,double w,double h,String title){Rectangle r=new Rectangle(w,h);r.setLayoutX(x);r.setLayoutY(y);r.setFill(Color.rgb(9,8,18,.88));r.setStroke(Color.web("#9a713f",.9));r.setStrokeWidth(2);r.setEffect(new DropShadow(22,Color.rgb(0,0,0,.65)));getChildren().add(r);Label t=label(title,17,"#f0d18b");t.setLayoutX(x+28);t.setLayoutY(y+25);getChildren().add(t);Rectangle d=new Rectangle(w-56,1,Color.web("#84613f",.7));d.setLayoutX(x+28);d.setLayoutY(y+61);getChildren().add(d);}
     private void divider(double x,double y,double w){Rectangle r=new Rectangle(w,1,Color.web("#936b43",.7));r.setLayoutX(x);r.setLayoutY(y);getChildren().add(r);}
     private void line(double x,double y,double w,double op){Rectangle r=new Rectangle(w,1,Color.web("#d0a85f",op));r.setLayoutX(x);r.setLayoutY(y);getChildren().add(r);}

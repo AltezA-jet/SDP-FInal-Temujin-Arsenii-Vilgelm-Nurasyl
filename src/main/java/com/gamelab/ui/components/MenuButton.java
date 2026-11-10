@@ -117,7 +117,8 @@ public final class MenuButton extends Pane {
             centered.setMouseTransparent(true);
             getChildren().add(getChildren().size() - 2, centered);
         }
-        installEvents();
+        // The base constructor already installs events. Registering twice fires an
+        // action twice on one release, which can switch to the wrong menu.
     }
 
     private MenuButton(Image frameImg, Image glowImg, double width, double height) {

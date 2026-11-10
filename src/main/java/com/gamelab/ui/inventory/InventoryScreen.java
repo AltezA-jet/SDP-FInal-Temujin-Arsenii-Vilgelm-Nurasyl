@@ -27,6 +27,10 @@ public final class InventoryScreen extends Pane {
     }
     public InventoryScreen(Inventory inventory,RuneLoadout loadout,RuneService runeService,
                            Runnable onBack,String characterClass) {
+        this(inventory, loadout, runeService, onBack, characterClass, null);
+    }
+    public InventoryScreen(Inventory inventory,RuneLoadout loadout,RuneService runeService,
+                           Runnable onBack,String characterClass, Runnable onContinue) {
         setPrefSize(W, H); setMinSize(W, H); setMaxSize(W, H);
         setStyle("-fx-background-color:#08050e;");
 
@@ -64,10 +68,15 @@ public final class InventoryScreen extends Pane {
         view.setMaxSize(1560, 820);
 
         MenuButton back = new MenuButton("НАЗАД", 220, 58);
-        back.relocate(850, 940); back.setOnAction(onBack);
+        back.relocate(onContinue == null ? 850 : 690, 940); back.setOnAction(onBack);
         setOnKeyPressed(event -> { if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) onBack.run(); });
         setFocusTraversable(true);
         getChildren().addAll(view, back);
+        if (onContinue != null) {
+            MenuButton next = new MenuButton("NEXT STAGE", 250, 58);
+            next.relocate(980, 940); next.setOnAction(onContinue);
+            getChildren().add(next);
+        }
         requestFocus();
     }
 }

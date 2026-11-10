@@ -18,6 +18,10 @@ public final class ShadowfallShopCatalog {
     public static Shop createDefaultShop(
             GameEventBus eventBus
     ) {
+        return createDefaultShop(eventBus, "WARRIOR");
+    }
+
+    public static Shop createDefaultShop(GameEventBus eventBus, String characterClass) {
         Objects.requireNonNull(
                 eventBus,
                 "Event bus cannot be null"
@@ -25,10 +29,14 @@ public final class ShadowfallShopCatalog {
 
         Shop shop = new Shop(eventBus);
 
-        for (Weapon weapon : WeaponCatalog.createAll()) {
+        for (Weapon weapon : WeaponCatalog.createUpgradesForClass(characterClass)) {
             if (weapon.getUpgradeLevel() > 1) {
                 shop.addItem(weapon);
             }
+        }
+        if (characterClass != null && characterClass.toUpperCase(java.util.Locale.ROOT).contains("ARCHER")) {
+            shop.addItem(new com.gamelab.domain.item.QuiverUpgrade("Reinforced Quiver", "Holds 15 arrows; one arrow returns every 1.5 seconds.", 140, 1, 15, 1.5));
+            shop.addItem(new com.gamelab.domain.item.QuiverUpgrade("Master Quiver", "Holds 20 arrows; one arrow returns every second.", 320, 2, 20, 1.0));
         }
 
         for (Rune rune

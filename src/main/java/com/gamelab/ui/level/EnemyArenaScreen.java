@@ -145,7 +145,13 @@ public final class EnemyArenaScreen extends Pane {
             if (first && !paused.isSelected()) {
                 if (code==KeyCode.W || code==KeyCode.UP || code==KeyCode.SPACE) simulation.jump();
                 if (code==KeyCode.J) simulation.attack();
-                if (code==KeyCode.SHIFT) simulation.dodge((keys.contains(KeyCode.D)||keys.contains(KeyCode.RIGHT)?1:0)-(keys.contains(KeyCode.A)||keys.contains(KeyCode.LEFT)?1:0));
+                if (code==KeyCode.SHIFT) simulation.boost();
+                if (code==KeyCode.E) simulation.useClassAbility();
+                if (code==KeyCode.DIGIT1) simulation.useSkill(0);
+                if (code==KeyCode.DIGIT2) simulation.useSkill(1);
+                if (code==KeyCode.DIGIT3) simulation.useSkill(2);
+                if (code==KeyCode.DIGIT4) simulation.useSkill(3);
+                if (code==KeyCode.DIGIT5) simulation.useSkill(4);
                 if(code==KeyCode.H && campaign) usePotion.run();
             }
             if (first && code==KeyCode.R) simulation.restart();
@@ -204,7 +210,7 @@ public final class EnemyArenaScreen extends Pane {
         volume.valueProperty().addListener((obs,old,value) -> audio.setVolume(value.doubleValue()/100));
         HBox soundOptions=new HBox(12,soundLabel,volume); soundOptions.relocate(1600,127);
         getChildren().add(soundOptions);
-        Label help=new Label("A/D — движение   W/Space — прыжок   S — присесть   Shift — уклонение   J/ЛКМ — удар   Esc — меню");
+        Label help=new Label("A/D — движение   W/Space — прыжок   S — присесть   Shift — ускорение   E — способность класса   J/ЛКМ — удар   Esc — меню");
         help.setStyle("-fx-text-fill: #f2d08a; -fx-font-size: 21px;"); help.relocate(30,956);
         status.setStyle("-fx-text-fill: #dfd4c1; -fx-font-size: 20px;"); status.relocate(30,1000);
         getChildren().addAll(help,status);
@@ -240,14 +246,21 @@ public final class EnemyArenaScreen extends Pane {
         render();
         requestFocus();
     }
+    /** Opens the final Lord encounter directly in the sandbox. */
+    public void startFinalBossDebug() {
+        if (campaign) throw new IllegalStateException("Debug boss launch is only available in the sandbox");
+        stage.getSelectionModel().select(5);
+        encounter.getSelectionModel().select(1);
+        spawnSelection();
+    }
     private void render() {
         hero.relocate(Math.rint(simulation.hero().x-hero.prefWidth(-1)/2),simulation.hero().y-hero.prefHeight(-1)+hero.getFootOffset()+HERO_DRAW_OFFSET_Y);
-        hero.setOpacity(simulation.dodging() ? .4 : 1);
+        hero.setOpacity(simulation.invisible() ? .16 : simulation.boosting() ? .82 : 1);
         health.setText("HP "+simulation.player().getHealth()+" / "+simulation.player().getMaxHealth()
                 +(simulation.player().getMaxMana()>0 ? "    MP "+simulation.player().getMana()+" / "+simulation.player().getMaxMana() : "")
                 +(simulation.poisoned() ? "   ЯД" : "")+(simulation.slowed()?"   ЛЁД":"")+
                 (simulation.fullStage()?"    Волна "+simulation.wave()+"/"+(activeStage==6?1:3):"")+
-                "    Ур. "+simulation.player().getLevel()+"    Уклонение: "+(simulation.dodgeCooldown()<=0?"готово":String.format(java.util.Locale.ROOT,"%.1f",simulation.dodgeCooldown())));
+                "    Ур. "+simulation.player().getLevel()+"    Shift: "+(simulation.boostCooldown()<=0?"готово":String.format(java.util.Locale.ROOT,"%.1f",simulation.boostCooldown())));
         draw();
         drawPlayerProjectiles();
     }
@@ -256,7 +269,7 @@ public final class EnemyArenaScreen extends Pane {
 
     private Image image(String relative) {
         if (images.containsKey(relative)) return images.get(relative);
-        URL resource=getClass().getResource(ROOT+relative);
+        URL resource=getClass().getResource(relative.startsWith("/") ? relative : ROOT+relative);
         Image image=resource==null ? null : new Image(resource.toExternalForm());
         images.put(relative,image);
         return image;
@@ -268,16 +281,23 @@ public final class EnemyArenaScreen extends Pane {
         Image source=image(path);
         if(source==null) throw new IllegalStateException("Missing terrain: "+path);
         var pixels=source.getPixelReader();
+        boolean whiteMatte=path.endsWith(".jpg");
         int left=(int)source.getWidth(),top=(int)source.getHeight(),right=0,bottom=0;
         for(int y=0;y<source.getHeight();y++) for(int x=0;x<source.getWidth();x++) {
             int pixel=pixels.getArgb(x,y);
             // The first two ground sheets have opaque black padding instead of transparent padding.
-            if((pixel>>>24)>48 && ((pixel>>16&255)+(pixel>>8&255)+(pixel&255))>48) {
+            int red=pixel>>16&255,green=pixel>>8&255,blue=pixel&255;
+            if((pixel>>>24)>48 && !(whiteMatte && red>235 && green>235 && blue>235) && (red+green+blue)>48) {
                 left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);
             }
         }
         if(right<left || bottom<top) throw new IllegalStateException("Empty terrain artwork: "+path);
-        Image cropped=new WritableImage(pixels,left,top,right-left+1,bottom-top+1);
+        WritableImage cropped=new WritableImage(right-left+1,bottom-top+1);
+        var writer=cropped.getPixelWriter();
+        for(int y=top;y<=bottom;y++) for(int x=left;x<=right;x++) {
+            int pixel=pixels.getArgb(x,y),red=pixel>>16&255,green=pixel>>8&255,blue=pixel&255;
+            writer.setArgb(x-left,y-top,whiteMatte && red>235 && green>235 && blue>235 ? 0 : pixel);
+        }
         images.put(key,cropped); return cropped;
     }
     private void draw() {
@@ -353,15 +373,18 @@ public final class EnemyArenaScreen extends Pane {
             g.setFill(Color.web("#7565dc"));g.fillRoundRect(40,81,290.0*simulation.player().getMana()/simulation.player().getMaxMana(),12,5,5);
             g.setFill(Color.web("#c9c2ff"));g.setFont(Font.font(12));g.fillText("MP  "+simulation.player().getMana()+" / "+simulation.player().getMaxMana(),45,91);
         }
-        double dodge=1-Math.min(1,simulation.dodgeCooldown()/.85);
+        double dodge=1-Math.min(1,simulation.boostCooldown()/.85);
         double dodgeY=simulation.player().getMaxMana()>0?102:92;
         g.setFill(Color.web("#31414f"));g.fillRect(40,dodgeY,84,4);
         g.setFill(dodge==1?Color.web("#a1d5cf"):Color.web("#6f91a6"));g.fillRect(40,dodgeY,84*dodge,4);
-        g.setFont(Font.font(13));g.setFill(Color.web("#b7c5ca"));g.fillText("Shift",40,dodgeY+25);
+        g.setFont(Font.font(13));g.setFill(Color.web("#b7c5ca"));g.fillText("Shift · BOOST",40,dodgeY+25);
         String effects=(simulation.poisoned()?"ЯД ":"")+(simulation.slowed()?"ЛЁД":"");
         g.setFill(Color.YELLOWGREEN);g.fillText(effects,220,113);
         g.setFill(Color.rgb(10,8,18,.70));g.fillRoundRect(24,H-63,160,39,9,9);
         g.setFill(Color.web("#ded1b5"));g.setFont(Font.font(16));g.fillText("H  ·  Зелья: "+potionCount.getAsInt(),39,H-38);
+        String classResource=simulation.heroController().resourceHud();
+        if (!classResource.isEmpty()) { g.setTextAlign(javafx.scene.text.TextAlignment.LEFT); g.setFill(Color.web("#e4d4b7")); g.setFont(Font.font(16)); g.fillText(classResource,205,H-38); }
+        g.setTextAlign(javafx.scene.text.TextAlignment.LEFT);g.setFill(Color.web("#d9bd84"));g.setFont(Font.font(13));g.fillText("1-5  Class skills",24,H-82);
         g.setTextAlign(javafx.scene.text.TextAlignment.RIGHT);g.setFill(Color.web("#e4d4b7"));g.setFont(Font.font(17));
         g.fillText("Волна "+simulation.wave()+" / "+(activeStage==6?1:3),W-28,45);
         var boss=simulation.fighters().stream().filter(f -> f.profile.boss() && f.enemy.isAlive()).findFirst().orElse(null);

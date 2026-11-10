@@ -5,6 +5,7 @@ import com.gamelab.domain.economy.CoinWallet;
 import com.gamelab.domain.inventory.Inventory;
 import com.gamelab.domain.item.Potion;
 import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.item.QuiverUpgrade;
 import com.gamelab.domain.rune.Rune;
 import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.pattern.observer.GameEventTypes;
@@ -82,6 +83,12 @@ public final class Shop {
             return PurchaseResult.failed(
                     "A weapon of this level has already been purchased"
             );
+        }
+
+        if (item instanceof QuiverUpgrade upgrade
+                && inventory.getItems().stream().anyMatch(existing -> existing instanceof QuiverUpgrade owned
+                && owned.level() == upgrade.level())) {
+            return PurchaseResult.failed("This quiver upgrade is already owned");
         }
 
         if (inventory.isFull()) {

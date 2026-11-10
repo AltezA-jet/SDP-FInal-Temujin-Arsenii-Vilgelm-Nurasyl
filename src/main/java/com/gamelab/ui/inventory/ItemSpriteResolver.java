@@ -3,6 +3,7 @@ package com.gamelab.ui.inventory;
 import com.gamelab.domain.Item;
 import com.gamelab.domain.item.Potion;
 import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.item.QuiverUpgrade;
 import com.gamelab.domain.rune.Rune;
 
 import java.util.Locale;
@@ -41,6 +42,10 @@ public final class ItemSpriteResolver {
                     + "health_potion.png";
         }
 
+        // A distinct quiver image is optional in the current art pack; use the
+        // equipment placeholder so market and inventory rendering never fails.
+        if (item instanceof QuiverUpgrade) return ROOT + "weapons/starter_sword.png";
+
         throw new IllegalArgumentException(
                 "No sprite registered for "
                         + item.getClass().getSimpleName()
@@ -54,6 +59,15 @@ public final class ItemSpriteResolver {
     private static String resolveWeapon(
             Weapon weapon
     ) {
+        String name = weapon.getName().toLowerCase(Locale.ROOT);
+        if (name.contains("bow")) return "/assets/All/Inventory_shop_items/Bow/" + switch (weapon.getUpgradeLevel()) {
+            case 1 -> "Bow_Start.png";
+            case 2 -> "Bow_Light.png";
+            case 3 -> "Bow_Hunter.png";
+            case 4 -> "Bow_Long.png";
+            case 5 -> "Bow_Dark.png";
+            default -> throw new IllegalArgumentException("Unknown bow level");
+        };
         String fileName = switch (
                 weapon.getUpgradeLevel()
                 ) {

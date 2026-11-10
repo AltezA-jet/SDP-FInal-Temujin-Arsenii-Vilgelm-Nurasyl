@@ -6,6 +6,7 @@ import com.gamelab.domain.Item;
 import com.gamelab.domain.inventory.Inventory;
 import com.gamelab.domain.item.Potion;
 import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.item.QuiverUpgrade;
 import com.gamelab.domain.rune.Rune;
 import com.gamelab.domain.rune.RuneLoadout;
 import com.gamelab.ui.ShadowfallUi;
@@ -229,7 +230,7 @@ public final class InventoryController {
         runeSlots.setVgap(12);
 
         weaponPanel.getChildren().setAll(
-                sectionLabel("ЭКИПИРОВАННЫЙ МЕЧ"),
+                sectionLabel("ЭКИПИРОВАННОЕ ОРУЖИЕ"),
                 createImageView(baseWeapon, 128),
                 weaponName,
                 damage,
@@ -377,7 +378,7 @@ public final class InventoryController {
 
         if (selectedItem instanceof Rune rune) {
             boolean installed = isInstalled(rune);
-            Label state = new Label(installed ? "УСТАНОВЛЕНА В МЕЧ" : "НАХОДИТСЯ В ИНВЕНТАРЕ");
+            Label state = new Label(installed ? "УСТАНОВЛЕНА В ОРУЖИЕ" : "НАХОДИТСЯ В ИНВЕНТАРЕ");
             state.setWrapText(true);
             state.setAlignment(Pos.CENTER);
             state.setMaxWidth(270);
@@ -390,7 +391,7 @@ public final class InventoryController {
             );
 
             MenuButton action = new MenuButton(
-                    installed ? "СНЯТЬ РУНУ" : "УСТАНОВИТЬ В МЕЧ",
+                    installed ? "СНЯТЬ РУНУ" : "УСТАНОВИТЬ В ОРУЖИЕ",
                     250,
                     58
             );
@@ -408,11 +409,14 @@ public final class InventoryController {
                 try {
                     if(!weapon.canBeUsedBy(characterClass)) throw new IllegalArgumentException("Оружие недоступно этому классу");
                     loadout.changeWeapon(weapon);inventory.equipWeapon(weapon,characterClass);
-                    showResult(RuneActionResult.successful("Меч экипирован"));
+                    showResult(RuneActionResult.successful("Оружие экипировано"));
                 } catch(IllegalArgumentException|IllegalStateException ex) { showResult(RuneActionResult.failed(ex.getMessage())); }
                 refresh();
             });
             detailsPanel.getChildren().add(equip);
+        } else if (selectedItem instanceof QuiverUpgrade upgrade) {
+            detailsPanel.getChildren().addAll(infoLabel("Колчан: " + upgrade.capacity() + " стрел"),
+                    infoLabel(String.format("Восстановление: %.1f с", upgrade.refillSeconds())));
         } else if (selectedItem instanceof Potion) {
             Label useHint = infoLabel("Зелье используется во время боя.");
             useHint.setWrapText(true);
@@ -443,7 +447,7 @@ public final class InventoryController {
     private boolean matchesFilter(Item item) {
         return switch (filter) {
             case ALL -> true;
-            case WEAPONS -> item instanceof Weapon;
+            case WEAPONS -> item instanceof Weapon || item instanceof QuiverUpgrade;
             case RUNES -> item instanceof Rune;
             case CONSUMABLES -> item instanceof Potion;
         };
@@ -520,16 +524,7 @@ public final class InventoryController {
     }
 
     private String displayName(Item item) {
-        if (item instanceof Weapon weapon) {
-            return switch (weapon.getUpgradeLevel()) {
-                case 1 -> "СТАРТОВЫЙ МЕЧ";
-                case 2 -> "БЫСТРЫЙ КЛИНОК";
-                case 3 -> "ДВУРУЧНЫЙ МЕЧ";
-                case 4 -> "МЕЧ ИЗ ТЁМНОЙ СТАЛИ";
-                case 5 -> "ДРЕВНИЙ КЛИНОК";
-                default -> weapon.getName().toUpperCase();
-            };
-        }
+        if (item instanceof Weapon weapon) return weapon.getName().toUpperCase();
 
         if (item instanceof Rune rune) {
             return switch (rune.getRuneType()) {

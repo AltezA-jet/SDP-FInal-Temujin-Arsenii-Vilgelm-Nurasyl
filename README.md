@@ -8,6 +8,14 @@ JavaFX game project built with Maven and Java 17.
 mvn javafx:run
 ```
 
+### Final boss debug launch
+
+In PowerShell, quote the Maven property so its dots are not parsed as a separate argument:
+
+```powershell
+mvn "-Dshadowfall.debug.finalBoss=true" javafx:run
+```
+
 ## Project layout
 
 ### Java packages

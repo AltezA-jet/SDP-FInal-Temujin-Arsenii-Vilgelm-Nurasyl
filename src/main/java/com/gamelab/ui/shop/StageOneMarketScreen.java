@@ -6,6 +6,7 @@ import com.gamelab.domain.economy.CoinWallet;
 import com.gamelab.domain.inventory.Inventory;
 import com.gamelab.domain.item.Potion;
 import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.item.QuiverUpgrade;
 import com.gamelab.domain.rune.Rune;
 import com.gamelab.domain.shop.PurchaseResult;
 import com.gamelab.domain.shop.ShadowfallShopCatalog;
@@ -63,12 +64,15 @@ public final class StageOneMarketScreen extends Pane {
     private final int completedStage;
     private final Runnable onBack;
     private final Runnable onContinue;
+    private final Runnable onOpenInventory;
+    private final Runnable onOpenSkillTree;
     private final GridPane shopItems = new GridPane();
     private final GridPane inventoryGrid = new GridPane();
     private final Label coinBalance = text("", 25, "#ffe29b");
     private final Label inventoryCount = text("", 18, "#d7c1a1");
     private final Label status = text("ВЫБЕРИТЕ ТОВАР У КУПЦА", 17, "#f3d69b");
     private final MenuButton[] shopFilterButtons = new MenuButton[4];
+    private final MenuButton[] navigationButtons = new MenuButton[7];
     private ShopFilter shopFilter = ShopFilter.ALL;
 
     public StageOneMarketScreen(
@@ -78,7 +82,7 @@ public final class StageOneMarketScreen extends Pane {
             Runnable onBack,
             Runnable onContinue
     ) {
-        this(player, inventory, wallet, 0, onBack, onContinue);
+        this(player, inventory, wallet, 0, onBack, onContinue, onBack, onBack);
     }
 
     public StageOneMarketScreen(
@@ -89,6 +93,12 @@ public final class StageOneMarketScreen extends Pane {
             Runnable onBack,
             Runnable onContinue
     ) {
+        this(player, inventory, wallet, completedStage, onBack, onContinue, onBack, onBack);
+    }
+
+    public StageOneMarketScreen(PlayerCharacter player, Inventory inventory, CoinWallet wallet,
+                                int completedStage, Runnable onBack, Runnable onContinue,
+                                Runnable onOpenInventory, Runnable onOpenSkillTree) {
         this.player = Objects.requireNonNull(player);
         this.inventory = Objects.requireNonNull(inventory);
         this.wallet = Objects.requireNonNull(wallet);
@@ -98,7 +108,9 @@ public final class StageOneMarketScreen extends Pane {
         this.completedStage = completedStage;
         this.onBack = Objects.requireNonNull(onBack);
         this.onContinue = Objects.requireNonNull(onContinue);
-        this.shop = ShadowfallShopCatalog.createDefaultShop(new GameEventBus());
+        this.onOpenInventory = Objects.requireNonNull(onOpenInventory);
+        this.onOpenSkillTree = Objects.requireNonNull(onOpenSkillTree);
+        this.shop = ShadowfallShopCatalog.createDefaultShop(new GameEventBus(), player.getCharacterClass());
 
         URL stylesheet = StageOneMarketScreen.class.getResource("/assets/ui/styles/market.css");
         if (stylesheet != null) getStylesheets().add(stylesheet.toExternalForm());
@@ -107,6 +119,7 @@ public final class StageOneMarketScreen extends Pane {
         setMinSize(W, H);
         setMaxSize(W, H);
         drawBackground();
+        buildNavigation();
         buildHeader();
         buildShop();
         buildInventory();
@@ -143,18 +156,47 @@ public final class StageOneMarketScreen extends Pane {
                 ? "ТРЕНИРОВКА ЗАВЕРШЕНА  //  ВЕЧЕРНИЙ РЫНОК"
                 : "ЭТАП "+completedStage+" ЗАВЕРШЁН  //  ВЕЧЕРНИЙ РЫНОК";
         Label title = text(heading, 31, "#f6cf7a");
-        title.relocate(58, 30);
+        title.relocate(58, 108);
         title.setPrefSize(1050, 52);
 
         ImageView coin = image(ItemSpriteResolver.coin(), 42);
-        coin.relocate(1640, 31);
-        coinBalance.relocate(1692, 33);
+        coin.relocate(1640, 108);
+        coinBalance.relocate(1692, 110);
         coinBalance.setPrefSize(180, 45);
         getChildren().addAll(title, coin, coinBalance);
     }
 
+    private void buildNavigation() {
+        String[] labels = {"←  BACK", "CHARACTER", "SKILL TREE", "INVENTORY", "STATS", "SETTINGS", "SHOP"};
+        double[] x = {35, 393, 570, 750, 927, 1105, 1285};
+        double[] widths = {168, 157, 157, 157, 157, 157, 157};
+        for (int i = 0; i < labels.length; i++) {
+            final int index = i;
+            MenuButton button = new MenuButton(labels[i], widths[i], 54);
+            button.relocate(x[i], 20);
+            button.setOnAction(() -> {
+                if (index == 0) {
+                    onBack.run();
+                    return;
+                }
+                if (index == 3) { onOpenInventory.run(); return; }
+                if (index == 1 || index == 2 || index == 4) { onOpenSkillTree.run(); return; }
+                refreshNavigation();
+            });
+            navigationButtons[i] = button;
+            getChildren().add(button);
+        }
+        refreshNavigation();
+    }
+
+    private void refreshNavigation() {
+        for (int i = 0; i < navigationButtons.length; i++) {
+            navigationButtons[i].setSelected(i == 6);
+        }
+    }
+
     private void buildShop() {
-        VBox panel = panel(48, 142, 650, 800);
+        VBox panel = panel(48, 150, 650, 792);
         Label title = text("МАГАЗИН КУПЦА", 28, "#f6cf7a");
         Label subtitle = text("Выберите категорию и товар", 14, "#cbb99f");
 
@@ -196,7 +238,7 @@ public final class StageOneMarketScreen extends Pane {
     }
 
     private void buildInventory() {
-        VBox panel = panel(1222, 142, 650, 800);
+        VBox panel = panel(1222, 150, 650, 792);
         Label title = text("ИНВЕНТАРЬ", 28, "#f6cf7a");
         inventoryCount.setAlignment(Pos.CENTER_RIGHT);
         inventoryCount.setPrefWidth(560);
@@ -282,7 +324,7 @@ public final class StageOneMarketScreen extends Pane {
     private boolean matchesShopFilter(Item item) {
         return switch (shopFilter) {
             case ALL -> true;
-            case WEAPONS -> item instanceof Weapon;
+            case WEAPONS -> item instanceof Weapon || item instanceof QuiverUpgrade;
             case RUNES -> item instanceof Rune;
             case CONSUMABLES -> item instanceof Potion;
         };

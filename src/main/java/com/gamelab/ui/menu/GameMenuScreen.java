@@ -27,10 +27,10 @@ public final class GameMenuScreen extends Pane {
     public static final double W=1920,H=1080;
     private static final String[] CLASSES={"WARRIOR","ARCHER","MAGE","ASSASSIN"};
     private static final String[][] SKILLS={
-        {"Whirlwind","Lunge","Crushing Leap","War Cry","Titan's Wrath"},
+        {"Whirlwind","Lunge (HEAVY)","Crushing Leap","War Cry","Titan's Wrath"},
         {"Triple Shot","Poison Arrow","Trap","Hunter's Mark","Arrow Rain"},
         {"Blink","Frost Ring","Chain Lightning","Mana Shield","Meteor"},
-        {"Shadow Strike","Smoke Bomb","Blade Flurry","Execution","Death Dance"}};
+        {"Shadow Strike / INVISIBILITY","Smoke Bomb","Blade Flurry","Execution","Death Dance"}};
     private static final int[] LEVELS={2,3,5,7,8};
     private static final int[][] COSTS={{1,1,2},{1,2,2},{2,2,3},{2,3,3},{3,4,5}};
     private static final String[] TABS={"CHARACTER","SKILL TREE","INVENTORY","STATS","SETTINGS","SHOP"};
@@ -39,6 +39,7 @@ public final class GameMenuScreen extends Pane {
     private final Inventory inventory;
     private final Consumer<Inventory> openInventory;
     private Consumer<Inventory> openShop = inventory -> { };
+    private Runnable onContinue = () -> { };
     private final CoinWallet wallet;
     private MenuButton shopButton;
     private final List<MenuButton> buttons=new ArrayList<>();
@@ -162,6 +163,7 @@ public final class GameMenuScreen extends Pane {
     private void drawFooter(){
         MenuButton[] classes=new MenuButton[4];for(int i=0;i<4;i++){final int index=i;classes[i]=button(CLASSES[i],574+i*195,922,185,64);classes[i].setOnAction(()->{selectedClass=index;selectedSkill=0;refresh();});buttons.add(classes[i]);}
         labelAt("LMB  Select / Upgrade",46,1022,17,"#cdbac7");labelAt("ESC  Back",1645,1022,17,"#cdbac7");
+        MenuButton next=button("NEXT STAGE",1380,922,220,64);next.setOnAction(()->onContinue.run());buttons.add(next);
         setOnKeyPressed(e->{
             if(e.getCode()==javafx.scene.input.KeyCode.ESCAPE) back.run();
             if(e.getCode()==javafx.scene.input.KeyCode.I) openInventory();
@@ -177,7 +179,12 @@ public final class GameMenuScreen extends Pane {
         if(detailTitle==null)return;
         detailTitle.setText(SKILLS[selectedClass][selectedSkill]);int rank=player.getSkillRank(skillId(selectedSkill));
         int cost=COSTS[selectedSkill][Math.min(rank,2)];
-        detailBody.setText("Rank: "+rank+" / 3\n\nUnlock level: "+LEVELS[selectedSkill]+(selectedSkill==4?" (ultimate)":"")+"\n\nEach later rank improves the skill effect by 20% and reduces cooldown by 10%.\n\nNext rank cost: "+cost+" skill points.");
+        String abilityHint = selectedClass==0 && selectedSkill==1
+                ? "\n\nActive ability: E performs a forward heavy strike."
+                : selectedClass==3 && selectedSkill==0
+                ? "\n\nActive ability: E grants temporary invisibility."
+                : "";
+        detailBody.setText("Rank: "+rank+" / 3\n\nUnlock level: "+LEVELS[selectedSkill]+(selectedSkill==4?" (ultimate)":"")+abilityHint+"\n\nEach later rank improves the skill effect by 20% and reduces cooldown by 10%.\n\nNext rank cost: "+cost+" skill points.");
         points.setText("Level "+player.getLevel()+"     Stat points: "+player.getStatPoints()+"     Skill points: "+player.getSkillPoints());
         for(int i=0;i<4;i++)if(dynamic.size()>=4)dynamic.get(i).setText(new int[]{player.getHealthRank(),player.getAttackRank(),player.getSpeedRank(),player.getResourcesRank()}[i]+" / 12");
         for(int i=0;i<4;i++){skillNodes[i].setText(SKILLS[selectedClass][i]);skillRankLabels[i].setText(player.getSkillRank(CLASSES[selectedClass].toLowerCase(java.util.Locale.ROOT)+"."+i)+" / 3");}
@@ -196,6 +203,7 @@ public final class GameMenuScreen extends Pane {
     public CoinWallet getWallet(){return wallet;}
     public void refreshWallet(){currencyLabel.setText("◆  "+wallet.getBalance());}
     public void setOnShop(Consumer<Inventory> openShop){this.openShop=openShop==null?inventory->{ }:openShop;}
+    public void setOnContinue(Runnable action){this.onContinue=action==null?()->{ }:action;}
     public void setShopAvailable(boolean available) { shopButton.setDisable(!available); }
     public void openInventory(){openInventory.accept(inventory);}
 }

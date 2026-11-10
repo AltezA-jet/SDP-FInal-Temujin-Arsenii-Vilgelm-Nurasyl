@@ -25,6 +25,9 @@ public interface HeroController {
 
     default void tick(double seconds) { }
 
+    /** Optional class resource displayed by the combat HUD. */
+    default String resourceHud() { return ""; }
+
     default void receiveDamage(int damage) { player().takeDamage(damage); }
     default int health() { return player().getHealth(); }
     default int maxHealth() { return player().getMaxHealth(); }
