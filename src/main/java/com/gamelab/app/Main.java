@@ -248,7 +248,9 @@ public class Main extends Application {
     private void openEnemyArena() {
         menu.stop();
         if (enemyArena != null) enemyArena.stop();
-        enemyArena = new EnemyArenaScreen(this::returnToMenu);
+        enemyArena = campaignPlayer == null
+                ? new EnemyArenaScreen(this::returnToMenu)
+                : EnemyArenaScreen.forClassSkillTesting(this::returnToMenu, campaignPlayer);
         showFixedScreen(enemyArena);
     }
 

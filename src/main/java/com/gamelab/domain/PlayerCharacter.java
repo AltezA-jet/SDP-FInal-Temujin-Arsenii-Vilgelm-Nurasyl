@@ -142,6 +142,17 @@ public class PlayerCharacter {
 
     public int getSkillRank(String skillId) { return skillRanks.getOrDefault(skillId, 0); }
 
+    /** Sandbox-only helper: makes every node of this hero's own class available for combat testing. */
+    public void unlockClassSkillsForDebug() {
+        String classId = switch (classIndex()) {
+            case 1 -> "archer";
+            case 2 -> "mage";
+            case 3 -> "assassin";
+            default -> "warrior";
+        };
+        for (int index = 0; index < 5; index++) skillRanks.put(classId + "." + index, 3);
+    }
+
     public void increaseDefense(int amount) {
         if (amount < 0) {
             throw new IllegalArgumentException("Defense increase cannot be negative");
