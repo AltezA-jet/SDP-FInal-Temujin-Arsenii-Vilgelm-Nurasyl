@@ -3,16 +3,22 @@ package com.gamelab.domain.inventory;
 import com.gamelab.domain.Item;
 
 import com.gamelab.domain.item.Weapon;
+import com.gamelab.domain.rune.Rune;
+import com.gamelab.domain.rune.RuneType;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public final class Inventory {
 
     private final int capacity;
     private final List<Item> items;
+    private final Set<RuneType> acquiredRuneTypes;
+    private final Set<Integer> acquiredWeaponLevels;
 
     private Weapon equippedWeapon;
 
@@ -26,6 +32,8 @@ public final class Inventory {
 
         this.capacity = capacity;
         this.items = new ArrayList<>();
+        this.acquiredRuneTypes = new HashSet<>();
+        this.acquiredWeaponLevels = new HashSet<>();
 
     }
 
@@ -42,6 +50,12 @@ public final class Inventory {
         }
 
         items.add(item);
+        if (item instanceof Rune rune) {
+            acquiredRuneTypes.add(rune.getRuneType());
+        }
+        if (item instanceof Weapon weapon) {
+            acquiredWeaponLevels.add(weapon.getUpgradeLevel());
+        }
     }
 
     public boolean removeItem(Item item) {
@@ -135,5 +149,17 @@ public final class Inventory {
 
     public boolean isEmpty() {
         return items.isEmpty();
+    }
+
+    /** Remains true after a rune is installed and removed from the inventory grid. */
+    public boolean hasAcquiredRuneType(RuneType runeType) {
+        return acquiredRuneTypes.contains(
+                Objects.requireNonNull(runeType, "Rune type cannot be null")
+        );
+    }
+
+    /** Remains true even if the weapon is later equipped, replaced or removed. */
+    public boolean hasAcquiredWeaponLevel(int upgradeLevel) {
+        return acquiredWeaponLevels.contains(upgradeLevel);
     }
 }

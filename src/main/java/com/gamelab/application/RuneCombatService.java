@@ -49,6 +49,13 @@ public final class RuneCombatService {
             PlayerCombatStrategy strategy,
             RuneLoadout loadout
     ) {
+        return attack(player,enemy,strategy,loadout,1);
+    }
+
+    /** Applies encounter protection to the complete hit, including weapon and rune bonuses. */
+    public int attack(PlayerCharacter player, Enemy enemy, PlayerCombatStrategy strategy,
+                      RuneLoadout loadout, double damageMultiplier) {
+        if(!Double.isFinite(damageMultiplier)||damageMultiplier<0) throw new IllegalArgumentException("Invalid damage multiplier");
         Objects.requireNonNull(
                 player,
                 "Player cannot be null"
@@ -98,7 +105,7 @@ public final class RuneCombatService {
             );
         }
 
-        int finalDamage = totalDamage;
+        int finalDamage = (int)Math.round(totalDamage*damageMultiplier);
 
         PlayerCombatStrategy finalDamageStrategy =
                 new PlayerCombatStrategy() {

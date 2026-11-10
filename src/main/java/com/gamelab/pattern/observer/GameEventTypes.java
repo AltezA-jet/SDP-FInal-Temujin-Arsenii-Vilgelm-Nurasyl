@@ -9,6 +9,7 @@ public final class GameEventTypes {
             "ITEM_PURCHASED";
 
     public static final String COMBAT_HIT = "COMBAT_HIT";
+    public static final String ENEMY_HEALTH_CHANGED = "ENEMY_HEALTH_CHANGED";
 
     public static final String ENEMY_KILLED =
             "ENEMY_KILLED";

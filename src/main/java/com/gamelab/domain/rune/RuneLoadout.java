@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public final class RuneLoadout {
 
-    private final Weapon weapon;
+    private Weapon weapon;
     private final List<Rune> installedRunes;
 
     public RuneLoadout(Weapon weapon) {
@@ -117,6 +117,15 @@ public final class RuneLoadout {
 
     public Weapon getWeapon() {
         return weapon;
+    }
+
+    /** Changes the active weapon without losing already installed runes. */
+    public void changeWeapon(Weapon newWeapon) {
+        Objects.requireNonNull(newWeapon, "Weapon cannot be null");
+        if (installedRunes.size() > newWeapon.getRuneSlotCount()) {
+            throw new IllegalStateException("The new weapon does not have enough rune slots");
+        }
+        weapon = newWeapon;
     }
 
     public List<Rune> getInstalledRunes() {

@@ -26,7 +26,7 @@ public final class WeaponCatalog {
                 "Starter Sword",
                 "A simple sword for a new knight.",
                 0,
-                "KNIGHT",
+                "ALL",
                 10,
                 1.0,
                 1,
