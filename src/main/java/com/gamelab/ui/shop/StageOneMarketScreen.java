@@ -72,7 +72,7 @@ public final class StageOneMarketScreen extends Pane {
     private final Label inventoryCount = text("", 18, "#d7c1a1");
     private final Label status = text("ВЫБЕРИТЕ ТОВАР У КУПЦА", 17, "#f3d69b");
     private final MenuButton[] shopFilterButtons = new MenuButton[4];
-    private final MenuButton[] navigationButtons = new MenuButton[7];
+    private final MenuButton[] navigationButtons = new MenuButton[6];
     private ShopFilter shopFilter = ShopFilter.ALL;
 
     public StageOneMarketScreen(
@@ -170,9 +170,12 @@ public final class StageOneMarketScreen extends Pane {
         String[] labels = {"←  BACK", "CHARACTER", "SKILL TREE", "INVENTORY", "STATS", "SETTINGS", "SHOP"};
         double[] x = {35, 393, 570, 750, 927, 1105, 1285};
         double[] widths = {168, 157, 157, 157, 157, 157, 157};
+        labels = new String[]{"BACK", "SKILL TREE", "INVENTORY", "STATS", "SETTINGS", "SHOP"};
+        x = new double[]{35, 430, 620, 810, 1000, 1190};
+        widths = new double[]{168, 170, 170, 170, 170, 170};
         for (int i = 0; i < labels.length; i++) {
             final int index = i;
-            String texture = switch (i) { case 0 -> "back.png"; case 2 -> "skill_tree.png"; case 3 -> "inventory.png"; case 6 -> "shop.png"; default -> null; };
+            String texture = switch (i) { case 0 -> "back.png"; case 1 -> "skill_tree.png"; case 2 -> "inventory.png"; case 3 -> "stats.png"; case 4 -> "settings.png"; case 5 -> "shop.png"; default -> null; };
             MenuButton button = texture == null ? new MenuButton(labels[i], widths[i], 54) : imageButton(texture, widths[i], 54);
             button.relocate(x[i], 20);
             button.setOnAction(() -> {
@@ -180,8 +183,8 @@ public final class StageOneMarketScreen extends Pane {
                     onBack.run();
                     return;
                 }
-                if (index == 3) { onOpenInventory.run(); return; }
-                if (index == 1 || index == 2 || index == 4) { onOpenSkillTree.run(); return; }
+                if (index == 2) { onOpenInventory.run(); return; }
+                if (index == 1 || index == 3) { onOpenSkillTree.run(); return; }
                 refreshNavigation();
             });
             navigationButtons[i] = button;
@@ -192,7 +195,7 @@ public final class StageOneMarketScreen extends Pane {
 
     private void refreshNavigation() {
         for (int i = 0; i < navigationButtons.length; i++) {
-            navigationButtons[i].setSelected(i == 6);
+            navigationButtons[i].setSelected(i == 5);
         }
     }
 
@@ -266,9 +269,10 @@ public final class StageOneMarketScreen extends Pane {
                 420,
                 60
         );
+        if (completedStage < 5) next = imageButton("go_to_location_" + (completedStage + 1) + ".png", 420, 60);
         next.relocate(1430, 997);
         next.setOnAction(onContinue);
-        getChildren().addAll(status, back, next);
+        getChildren().addAll(status, next);
     }
 
     private void refresh() {

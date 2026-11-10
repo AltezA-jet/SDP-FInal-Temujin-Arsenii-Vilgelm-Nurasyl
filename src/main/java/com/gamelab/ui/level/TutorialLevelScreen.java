@@ -139,7 +139,7 @@ public final class TutorialLevelScreen extends Pane {
         completeCard.setEffect(new DropShadow(24, Color.rgb(0, 0, 0, .72)));
         Label completeText = label("✓ TRAINING COMPLETE", 19, 650, 920, 620, 30, "#f6c66d");
         completeText.setAlignment(Pos.CENTER);
-        MenuButton next = new MenuButton("ENTER LOCATION 1", 420, 62);
+        MenuButton next = imageButton("go_to_location_1.png", 420, 62);
         next.relocate(750, 958);
         next.setOnAction(() -> { timer.stop(); onComplete.run(); });
         completionHud.getChildren().addAll(completeCard, completeText, next);
@@ -157,6 +157,10 @@ public final class TutorialLevelScreen extends Pane {
         Label actionLabel = label(action, 13, 0, 0, 110, 21, "#f6c66d");
         grid.add(keyLabel, column, row);
         grid.add(actionLabel, column + 1, row);
+    }
+    private static MenuButton imageButton(String asset, double width, double height) {
+        var resource = TutorialLevelScreen.class.getResource("/assets/ui/buttons/labels/" + asset);
+        return resource == null ? new MenuButton(asset, width, height) : new MenuButton(new Image(resource.toExternalForm()), width, height);
     }
 
     private void update(double dt) {

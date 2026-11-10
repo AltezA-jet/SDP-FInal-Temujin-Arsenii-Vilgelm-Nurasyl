@@ -73,10 +73,14 @@ public final class InventoryScreen extends Pane {
         setFocusTraversable(true);
         getChildren().addAll(view, back);
         if (onContinue != null) {
-            MenuButton next = new MenuButton("NEXT STAGE", 250, 58);
+            MenuButton next = imageButton("go_to_location_1.png", 250, 58);
             next.relocate(980, 940); next.setOnAction(onContinue);
             getChildren().add(next);
         }
         requestFocus();
+    }
+    private static MenuButton imageButton(String asset, double width, double height) {
+        URL resource = InventoryScreen.class.getResource("/assets/ui/buttons/labels/" + asset);
+        return resource == null ? new MenuButton(asset, width, height) : new MenuButton(new Image(resource.toExternalForm()), width, height);
     }
 }

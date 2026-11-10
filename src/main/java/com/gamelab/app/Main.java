@@ -190,7 +190,7 @@ public class Main extends Application {
         });
         Button menuButton=new Button("В главное меню"); menuButton.relocate(1350,1010);
         menuButton.setStyle("-fx-font-size:20px;");menuButton.setOnAction(e -> returnToMenu());
-        gameMenu.getChildren().add(menuButton);showFixedScreen(gameMenu);
+        showFixedScreen(gameMenu);
     }
 
     private void showCampaignVictory() {
