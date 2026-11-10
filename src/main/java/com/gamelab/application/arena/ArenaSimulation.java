@@ -29,7 +29,7 @@ public final class ArenaSimulation {
         public final Body body;
         public final boolean summoned;
         public double cooldown = 1, windup, charging, chargeDirection, jumpCooldown;
-        public double hurtTime, hurtElapsed, animationTime, recovery, summonCooldown, slowTime, dotTime, dotTick;
+        public double hurtTime, hurtElapsed, animationTime, recovery, summonCooldown, slowTime, dotTime, dotTick, markedTime;
         public int dotDamage, phase=1;
         public boolean facingLeft=true, heavy, rollJumped;
         public String owner="";
@@ -62,6 +62,8 @@ public final class ArenaSimulation {
         public final Attack kind;
         public final String source;
         public final boolean fromPlayer;
+        /** Skill payload for player projectiles, for example poison arrows. */
+        public String skillEffect = "";
         private Projectile(double x, double y, double vx, double vy, double radius, int damage,
                            boolean throughPlatforms, Attack kind, String source) {
             this(x,y,vx,vy,radius,damage,throughPlatforms,kind,source,false);
@@ -75,8 +77,13 @@ public final class ArenaSimulation {
     public static final class Zone {
         public final double x, y, radius;
         public final boolean poison;
+        public final boolean playerOwned;
+        public final int damage;
         public double life = 3, tick;
-        private Zone(double x, double y, boolean poison) { this.x=x; this.y=y; this.poison=poison; radius=95; }
+        private Zone(double x, double y, boolean poison) { this(x,y,poison,false,0); }
+        private Zone(double x, double y, boolean poison, boolean playerOwned, int damage) {
+            this.x=x; this.y=y; this.poison=poison; this.playerOwned=playerOwned; this.damage=damage; radius=95;
+        }
     }
     public static final class Impact {
         public final double x,y;
@@ -315,9 +322,9 @@ public final class ArenaSimulation {
                 for (double spread : new double[]{-.18, 0, .18}) spawnPlayerProjectile(direction, spread, 1.0);
                 events.publish("PLAYER_TRIPLE_SHOT", "Triple Shot");
             } else if (slot == 1) {
-                spawnPlayerProjectile(direction, 0, 1.25); events.publish("PLAYER_POISON_ARROW", "Poison Arrow");
-            } else if (slot == 2) { zones.add(new Zone(hero.x + direction * 100, hero.y, true)); events.publish("PLAYER_TRAP", "Trap"); }
-            else if (slot == 3) { hitProtection = 1.2 + rank * .2; events.publish("PLAYER_MARK", "Hunter's Mark"); }
+                spawnPlayerProjectile(direction, 0, 1.25, "poison"); events.publish("PLAYER_POISON_ARROW", "Poison Arrow");
+            } else if (slot == 2) { zones.add(new Zone(hero.x + direction * 100, hero.y, true, true, 5 + rank * 3)); events.publish("PLAYER_TRAP", "Trap"); }
+            else if (slot == 3) { markNearestEnemy(direction, 4 + rank); events.publish("PLAYER_MARK", "Hunter's Mark"); }
             else { if (!consumeArcherArrows(5)) return; for (int i=-2;i<=2;i++) spawnPlayerProjectile(direction, i*.12, .9); events.publish("PLAYER_ARROW_RAIN", "Arrow Rain"); }
         } else if (classId.equals("mage")) {
             if (slot == 0) { hero.x=Math.max(40,Math.min(1880,hero.x+direction*240)); events.publish("PLAYER_BLINK", "Blink"); }
@@ -327,7 +334,7 @@ public final class ArenaSimulation {
             else { damageNearby(420, rank * 10 + 15); impacts.add(new Impact(hero.x+direction*180,hero.y-80)); events.publish("PLAYER_METEOR", "Meteor"); }
         } else if (classId.equals("assassin")) {
             if (slot == 0) { invisibilityTime=2.5+rank*.5; events.publish("PLAYER_INVISIBLE", "Invisibility"); }
-            else if (slot == 1) { zones.add(new Zone(hero.x,hero.y,true)); events.publish("PLAYER_SMOKE", "Smoke Bomb"); }
+            else if (slot == 1) { zones.add(new Zone(hero.x,hero.y,false,true,3 + rank)); hitProtection=2 + rank*.4; events.publish("PLAYER_SMOKE", "Smoke Bomb"); }
             else if (slot == 2) { damageNearby(170,rank*7+8); events.publish("PLAYER_FLURRY", "Blade Flurry"); }
             else if (slot == 3) { damageNearby(190,rank*12+12); events.publish("PLAYER_EXECUTION", "Execution"); }
             else { dodge(direction); events.publish("PLAYER_DEATH_DANCE", "Death Dance"); }
@@ -344,6 +351,11 @@ public final class ArenaSimulation {
         for (Fighter fighter : fighters) if (fighter.enemy.isAlive() && Math.hypot(fighter.body.x-hero.x, fighter.body.y-hero.y) <= radius) {
             combat.damageEnemy(fighter.enemy, damage); recordDeath(fighter);
         }
+    }
+    private void markNearestEnemy(double direction, double duration) {
+        fighters.stream().filter(f -> f.enemy.isAlive() && (f.body.x-hero.x)*direction > 0)
+                .min(Comparator.comparingDouble(f -> Math.abs(f.body.x-hero.x)))
+                .ifPresent(fighter -> fighter.markedTime = duration);
     }
     private boolean consumeArcherArrows(int amount) {
         if (!(heroController instanceof ArcherController archer) || archer.consumeArrows(amount)) return true;
@@ -393,6 +405,7 @@ public final class ArenaSimulation {
                 }
                 double protection=fighter.profile.attack()==Attack.FINAL && fighter.phase==1 && !hasRune(RuneType.ANCIENT)?.8:1;
                 dealt=loadout==null ? combat.attack(player,fighter.enemy,effective) : runeCombat.attack(player,fighter.enemy,playerStrategy,loadout,protection);
+                dealt=applyMarkBonus(fighter,dealt);
                 if(dealt>0) {
                     if(hasRune(RuneType.POISON)||hasRune(RuneType.FIRE)) { fighter.dotTime=3; fighter.dotDamage=hasRune(RuneType.FIRE)?4:3; }
                     if(hasRune(RuneType.ICE)) fighter.slowTime=2;
@@ -411,7 +424,8 @@ public final class ArenaSimulation {
     private boolean isMage() { return heroController.magical(); }
     private boolean isRangedClass() { return heroController.ranged(); }
     private void spawnPlayerProjectile() { spawnPlayerProjectile(facingLeft ? -1 : 1, 0, 1); }
-    private void spawnPlayerProjectile(double direction, double spread, double damageMultiplier) {
+    private void spawnPlayerProjectile(double direction, double spread, double damageMultiplier) { spawnPlayerProjectile(direction, spread, damageMultiplier, ""); }
+    private void spawnPlayerProjectile(double direction, double spread, double damageMultiplier, String skillEffect) {
         boolean mage=heroController.magical();
         Fighter target=fighters.stream().filter(f -> f.enemy.isAlive()
                         && (f.body.x-hero.x)*direction>0)
@@ -427,9 +441,11 @@ public final class ArenaSimulation {
             vy=Math.sin(angle)*heroController.projectileSpeed();
         }
         int shotDamage=Math.max(1,(int)Math.round(playerStrategy.calculateDamage(player)*damageMultiplier));
-        projectiles.add(new Projectile(startX,startY,vx,vy,
+        Projectile projectile=new Projectile(startX,startY,vx,vy,
                 heroController.projectileRadius(),shotDamage,false,mage?Attack.FIREBALL:Attack.SHOT,
-                heroController.projectileSource(),true));
+                heroController.projectileSource(),true);
+        projectile.skillEffect=skillEffect;
+        projectiles.add(projectile);
         events.publish("PLAYER_PROJECTILE",heroController.attackLabel());
     }
     private boolean hasRune(RuneType type) { return loadout!=null && loadout.getInstalledRunes().stream().anyMatch(r -> r.getRuneType()==type); }
@@ -495,7 +511,14 @@ public final class ArenaSimulation {
         impacts.forEach(i -> i.time+=dt); impacts.removeIf(i -> i.time>=.4);
         for (Zone zone : zones) {
             zone.life-=dt; zone.tick-=dt;
-            if (zone.tick<=0 && Math.abs(hero.x-zone.x)<zone.radius && Math.abs(hero.y-zone.y)<50) {
+            if (zone.tick<=0 && zone.playerOwned) {
+                for (Fighter fighter : fighters) if (fighter.enemy.isAlive() && Math.abs(fighter.body.x-zone.x)<zone.radius && Math.abs(fighter.body.y-zone.y)<80) {
+                    combat.damageEnemy(fighter.enemy, zone.damage);
+                    if (zone.poison) { fighter.dotTime=Math.max(fighter.dotTime,3); fighter.dotDamage=Math.max(fighter.dotDamage,zone.damage); }
+                    recordDeath(fighter);
+                }
+                zone.tick=.6;
+            } else if (zone.tick<=0 && Math.abs(hero.x-zone.x)<zone.radius && Math.abs(hero.y-zone.y)<50) {
                 hurt(14); if (zone.poison && !invincible && !dodging()) poisonTime=3; zone.tick=.6;
             }
         }
@@ -518,6 +541,7 @@ public final class ArenaSimulation {
         fighter.animationTime+=dt;
         fighter.summonCooldown=Math.max(0,fighter.summonCooldown-dt);
         fighter.slowTime=Math.max(0,fighter.slowTime-dt);
+        fighter.markedTime=Math.max(0,fighter.markedTime-dt);
         if(fighter.dotTime>0) {
             fighter.dotTime-=dt; fighter.dotTick-=dt;
             if(fighter.dotTick<=0) { combat.damageEnemy(fighter.enemy,fighter.dotDamage); fighter.dotTick=1; }
@@ -855,7 +879,9 @@ public final class ArenaSimulation {
         double protection=fighter.profile.attack()==Attack.FINAL && fighter.phase==1 && !hasRune(RuneType.ANCIENT)?.8:1;
         int dealt=loadout==null ? combat.attack(player,fighter.enemy,playerStrategy)
                 : runeCombat.attack(player,fighter.enemy,playerStrategy,loadout,protection);
+        dealt=applyMarkBonus(fighter,dealt);
         if (dealt>0) {
+            if (shot.skillEffect.equals("poison")) { fighter.dotTime=4; fighter.dotDamage=Math.max(fighter.dotDamage,4); }
             if(hasRune(RuneType.POISON)||hasRune(RuneType.FIRE)) { fighter.dotTime=3; fighter.dotDamage=hasRune(RuneType.FIRE)?4:3; }
             if(hasRune(RuneType.ICE)) fighter.slowTime=2;
             if(hasRune(RuneType.LIGHTNING)) {
@@ -867,6 +893,12 @@ public final class ArenaSimulation {
                     new com.gamelab.application.audio.WeaponImpact(fighter.profile.hitSurface(),dealt));
         }
         recordDeath(fighter);
+    }
+    private int applyMarkBonus(Fighter fighter, int dealt) {
+        if (dealt <= 0 || fighter.markedTime <= 0) return dealt;
+        int bonus=Math.max(1,(int)Math.round(dealt*.35));
+        combat.damageEnemy(fighter.enemy,bonus);
+        return dealt+bonus;
     }
 
     private void hurt(int damage) {

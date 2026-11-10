@@ -37,6 +37,7 @@ public final class EnemyArenaScreen extends Pane {
     private static final double HERO_DRAW_OFFSET_Y=6;
     private static final double ENEMY_DRAW_OFFSET_Y=4;
     private static final String ROOT="/assets/enemies/";
+    private static final ThreadLocal<PlayerCharacter> DEBUG_PLAYER = new ThreadLocal<>();
     private final Canvas canvas=new Canvas(W,H);
     private final Canvas playerProjectileCanvas=new Canvas(W,H);
     private final MaleWarriorSprite hero=new MaleWarriorSprite(MaleWarriorSprite.GAME_HEIGHT);
@@ -96,6 +97,13 @@ public final class EnemyArenaScreen extends Pane {
         this(onBack,new GameEventBus());
     }
 
+    /** Builds the sandbox for a created hero, with every skill of that class unlocked. */
+    public static EnemyArenaScreen forClassSkillTesting(Runnable onBack, PlayerCharacter player) {
+        DEBUG_PLAYER.set(Objects.requireNonNull(player));
+        try { return new EnemyArenaScreen(onBack); }
+        finally { DEBUG_PLAYER.remove(); }
+    }
+
     EnemyArenaScreen(Runnable onBack, GameEventBus events) {
         this(onBack,events,new JavaSoundPlayer());
     }
@@ -112,7 +120,9 @@ public final class EnemyArenaScreen extends Pane {
     private EnemyArenaScreen(Runnable onBack,GameEventBus events,SoundPlayer soundPlayer,ArenaSimulation provided,int campaignStage,CombatAudio sharedAudio) {
         this.onBack=Objects.requireNonNull(onBack);
         campaign=provided!=null;
-        PlayerCharacter player=CharacterBuilder.warrior("Испытатель").maxHealth(250).damage(10).defense(0).build();
+        PlayerCharacter player=DEBUG_PLAYER.get();
+        if (player == null) player=CharacterBuilder.warrior("Испытатель").maxHealth(250).damage(10).defense(0).build();
+        if (!campaign) player.unlockClassSkillsForDebug();
         simulation=campaign?provided:new ArenaSimulation(player,events);
         if(campaign) { loadout=simulation.loadout(); activeStage=campaignStage; }
         simulation.setLoadout(loadout);
