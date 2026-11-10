@@ -33,7 +33,7 @@ public final class GameMenuScreen extends Pane {
         {"Shadow Strike / INVISIBILITY","Smoke Bomb","Blade Flurry","Execution","Death Dance"}};
     private static final int[] LEVELS={2,3,5,7,8};
     private static final int[][] COSTS={{1,1,2},{1,2,2},{2,2,3},{2,3,3},{3,4,5}};
-    private static final String[] TABS={"CHARACTER","SKILL TREE","INVENTORY","STATS","SETTINGS","SHOP"};
+    private static final String[] TABS={"SKILL TREE","INVENTORY","STATS","SETTINGS","SHOP"};
     private final PlayerCharacter player;
     private final Runnable back;
     private final Inventory inventory;
@@ -46,7 +46,7 @@ public final class GameMenuScreen extends Pane {
     private final List<Label> dynamic=new ArrayList<>();
     private final MenuButton[] skillNodes=new MenuButton[5];
     private final Label[] skillRankLabels=new Label[4];
-    private int selectedClass,selectedSkill=0,selectedTab=1;
+    private int selectedClass,selectedSkill=0,selectedTab=0;
     private Label detailTitle,detailBody,points,feedback;
     private Label currencyLabel;
 
@@ -87,6 +87,7 @@ public final class GameMenuScreen extends Pane {
                           Consumer<Inventory> openInventory,CoinWallet wallet) {
         this.wallet=java.util.Objects.requireNonNull(wallet);
         this.player = player;
+        this.selectedClass = classIndex(player.getCharacterClass());
         this.back = back;
         this.inventory = inventory;
         this.openInventory = openInventory;
@@ -113,13 +114,13 @@ public final class GameMenuScreen extends Pane {
         MenuButton backButton=button("←  BACK",34,24,190,58);backButton.setOnAction(back);buttons.add(backButton);
         for(int i=0;i<TABS.length;i++){
             final int tab=i;
-            String label = switch (i) { case 1 -> "skill_tree.png"; case 2 -> "inventory.png"; case 5 -> "shop.png"; default -> null; };
+            String label = switch (i) { case 0 -> "skill_tree.png"; case 1 -> "inventory.png"; case 2 -> "stats.png"; case 3 -> "settings.png"; case 4 -> "shop.png"; default -> null; };
             MenuButton b=label == null ? button(TABS[i],420+i*190,28,175,54) : imageButton(label,420+i*190,28,175,54);
-            if(tab==5) shopButton=b;
+            if(tab==4) shopButton=b;
             b.setOnAction(()->{
                 selectedTab=tab;
-                if(tab==2) openInventory();
-                if(tab==5) openShop.accept(inventory);
+                if(tab==1) openInventory();
+                if(tab==4) openShop.accept(inventory);
                 refresh();
             });
             buttons.add(b);
@@ -162,7 +163,6 @@ public final class GameMenuScreen extends Pane {
         labelAt("Click a node to inspect it",805,850,16,"#d4bacd");
     }
     private void drawFooter(){
-        MenuButton[] classes=new MenuButton[4];for(int i=0;i<4;i++){final int index=i;classes[i]=button(CLASSES[i],574+i*195,922,185,64);classes[i].setOnAction(()->{selectedClass=index;selectedSkill=0;refresh();});buttons.add(classes[i]);}
         labelAt("LMB  Select / Upgrade",46,1022,17,"#cdbac7");labelAt("ESC  Back",1645,1022,17,"#cdbac7");
         MenuButton next=imageButton("go_to_location_1.png",1380,922,220,64);next.setOnAction(()->onContinue.run());buttons.add(next);
         setOnKeyPressed(e->{
