@@ -172,7 +172,8 @@ public final class StageOneMarketScreen extends Pane {
         double[] widths = {168, 157, 157, 157, 157, 157, 157};
         for (int i = 0; i < labels.length; i++) {
             final int index = i;
-            MenuButton button = new MenuButton(labels[i], widths[i], 54);
+            String texture = switch (i) { case 0 -> "back.png"; case 2 -> "skill_tree.png"; case 3 -> "inventory.png"; case 6 -> "shop.png"; default -> null; };
+            MenuButton button = texture == null ? new MenuButton(labels[i], widths[i], 54) : imageButton(texture, widths[i], 54);
             button.relocate(x[i], 20);
             button.setOnAction(() -> {
                 if (index == 0) {
@@ -401,5 +402,10 @@ public final class StageOneMarketScreen extends Pane {
         image.setPreserveRatio(true);
         image.setSmooth(false);
         return image;
+    }
+
+    private static MenuButton imageButton(String asset, double width, double height) {
+        URL resource = StageOneMarketScreen.class.getResource("/assets/ui/buttons/labels/" + asset);
+        return resource == null ? new MenuButton(asset, width, height) : new MenuButton(new Image(resource.toExternalForm()), width, height);
     }
 }

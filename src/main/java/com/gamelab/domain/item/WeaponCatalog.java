@@ -26,7 +26,7 @@ public final class WeaponCatalog {
                 "Starter Sword",
                 "A simple sword for a new knight.",
                 0,
-                "ALL",
+                "KNIGHT",
                 10,
                 1.0,
                 1,
@@ -102,6 +102,15 @@ public final class WeaponCatalog {
     public static List<Weapon> createUpgradesForClass(String characterClass) {
         return List.of(createForClass(characterClass, 1), createForClass(characterClass, 2),
                 createForClass(characterClass, 3), createForClass(characterClass, 4), createForClass(characterClass, 5));
+    }
+
+    /** Full shop assortment: every class' five weapon tiers. Ownership is still class-restricted. */
+    public static List<Weapon> createAllClassWeapons() {
+        java.util.List<Weapon> weapons = new java.util.ArrayList<>();
+        for (String characterClass : List.of("KNIGHT", "ARCHER", "MAGE", "ASSASSIN")) {
+            weapons.addAll(createUpgradesForClass(characterClass));
+        }
+        return List.copyOf(weapons);
     }
 
     private static Weapon createForClass(String characterClass, int level) {

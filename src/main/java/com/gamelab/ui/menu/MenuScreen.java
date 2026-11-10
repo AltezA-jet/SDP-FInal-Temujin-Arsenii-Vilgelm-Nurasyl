@@ -141,7 +141,7 @@ public final class MenuScreen extends Pane {
         for (int i = 0; i < buttons.length; i++) {
             final int index = i;
             MenuButton b = i == 2
-                    ? new MenuButton("ENEMY ARENA", frame.getWidth(), frame.getHeight())
+                    ? new MenuButton(require("/assets/ui/buttons/labels/enemy_arena.png"), frame.getWidth(), frame.getHeight())
                     : new MenuButton(frame, require("/assets/ui/buttons/labels/label_" + LABELS[i < 2 ? i : i - 1] + ".png"), glow,
                     LABEL_OFF[i < 2 ? i : i - 1][0], LABEL_OFF[i < 2 ? i : i - 1][1], GLOW_DX, GLOW_DY);
             // MenuScreen routes keyboard activation centrally to support arrow-key focus.

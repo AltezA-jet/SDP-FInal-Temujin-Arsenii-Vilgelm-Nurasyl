@@ -113,7 +113,8 @@ public final class GameMenuScreen extends Pane {
         MenuButton backButton=button("←  BACK",34,24,190,58);backButton.setOnAction(back);buttons.add(backButton);
         for(int i=0;i<TABS.length;i++){
             final int tab=i;
-            MenuButton b=button(TABS[i],420+i*190,28,175,54);
+            String label = switch (i) { case 1 -> "skill_tree.png"; case 2 -> "inventory.png"; case 5 -> "shop.png"; default -> null; };
+            MenuButton b=label == null ? button(TABS[i],420+i*190,28,175,54) : imageButton(label,420+i*190,28,175,54);
             if(tab==5) shopButton=b;
             b.setOnAction(()->{
                 selectedTab=tab;
@@ -163,7 +164,7 @@ public final class GameMenuScreen extends Pane {
     private void drawFooter(){
         MenuButton[] classes=new MenuButton[4];for(int i=0;i<4;i++){final int index=i;classes[i]=button(CLASSES[i],574+i*195,922,185,64);classes[i].setOnAction(()->{selectedClass=index;selectedSkill=0;refresh();});buttons.add(classes[i]);}
         labelAt("LMB  Select / Upgrade",46,1022,17,"#cdbac7");labelAt("ESC  Back",1645,1022,17,"#cdbac7");
-        MenuButton next=button("NEXT STAGE",1380,922,220,64);next.setOnAction(()->onContinue.run());buttons.add(next);
+        MenuButton next=imageButton("go_to_location_1.png",1380,922,220,64);next.setOnAction(()->onContinue.run());buttons.add(next);
         setOnKeyPressed(e->{
             if(e.getCode()==javafx.scene.input.KeyCode.ESCAPE) back.run();
             if(e.getCode()==javafx.scene.input.KeyCode.I) openInventory();
@@ -195,6 +196,11 @@ public final class GameMenuScreen extends Pane {
     }
     private int classIndex(String name){for(int i=0;i<CLASSES.length;i++)if(name.toUpperCase(java.util.Locale.ROOT).contains(CLASSES[i]))return i;return 0;}
     private MenuButton button(String text,double x,double y,double w,double h){MenuButton b=new MenuButton(text,w,h);b.relocate(x,y);getChildren().add(b);return b;}
+    private MenuButton imageButton(String asset,double x,double y,double w,double h){
+        var url=GameMenuScreen.class.getResource("/assets/ui/buttons/labels/"+asset);
+        if(url==null) return button(asset,x,y,w,h);
+        MenuButton b=new MenuButton(new Image(url.toExternalForm()),w,h);b.relocate(x,y);getChildren().add(b);return b;
+    }
     private void panel(double x,double y,double w,double h){Rectangle p=new Rectangle(x,y,w,h);p.setFill(Color.rgb(12,6,19,.91));p.setStroke(Color.web("#d08b4a"));p.setStrokeWidth(3);getChildren().add(p);}
     private void line(double x1,double y1,double x2,double y2,String color,double width){Line l=new Line(x1,y1,x2,y2);l.setStroke(Color.web(color));l.setStrokeWidth(width);getChildren().add(l);}
     private Label label(String text,double x,double y,double size,double w,double h,String color){Label l=new Label(text);l.relocate(x,y);l.setPrefSize(w,h);l.setTextFill(Color.web(color));l.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: "+size+"px; -fx-font-weight: bold;");l.setAlignment(Pos.CENTER_LEFT);return l;}
