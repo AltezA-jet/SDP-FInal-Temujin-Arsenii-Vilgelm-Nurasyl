@@ -41,7 +41,7 @@ public final class GameScreen extends Pane {
         Label title = new Label("SHADOWFALL"); title.setTextFill(Color.web("#f2d08a")); title.setFont(Font.font("Serif", 36)); title.relocate(800, 80);
         Label hero = new Label(player.getName() + "  ·  " + player.getCharacterClass()); hero.setTextFill(Color.web("#dfd4c1")); hero.setFont(Font.font("Serif", 22)); hero.relocate(40, 120);
         healthHud.relocate(32, 32); refreshHealth();
-        Label back = new Label("ВЕРНУТЬСЯ В МЕНЮ"); back.setTextFill(Color.web("#f2d08a")); back.setFont(Font.font("Serif", 18));
+        Label back = new Label("RETURN TO MENU"); back.setTextFill(Color.web("#f2d08a")); back.setFont(Font.font("Serif", 18));
         back.setStyle("-fx-padding: 12 20; -fx-border-color: #9b7040; -fx-background-color: #100e1b;"); back.relocate(830, 950); back.setOnMouseClicked(event -> onReturnToMenu.run());
         bossHud.relocate((MenuScreen.W - 700) / 2, MenuScreen.H - 105); bossHud.setVisible(false);
         inventoryView.relocate(610, 240); inventoryView.setPrefSize(700, 500); inventoryView.setVisible(false);
@@ -90,3 +90,4 @@ public final class GameScreen extends Pane {
 
     public void toggleInventory() { inventoryView.setVisible(!inventoryView.isVisible()); }
 }
+

@@ -240,12 +240,12 @@ public final class StageOneLevelScreen extends Pane {
         healthHud.relocate(32, 25);
         healthHud.setHealth(player.getHealth(), player.getMaxHealth());
 
-        Label stageNumber = label("—  ◇  ЭТАП 1  ◇  —", 18, "#e7b95d");
+        Label stageNumber = label("—  ◇  STAGE 1  ◇  —", 18, "#e7b95d");
         stageNumber.relocate(700, 9);
         stageNumber.setPrefSize(520, 28);
         stageNumber.setAlignment(Pos.CENTER);
 
-        Label stageTitle = label("ЗАБЫТЫЕ РУИНЫ", 29, "#f6cf7a");
+        Label stageTitle = label("FORGOTTEN RUINS", 29, "#f6cf7a");
         stageTitle.relocate(670, 34);
         stageTitle.setPrefSize(580, 38);
         stageTitle.setAlignment(Pos.CENTER);
@@ -278,7 +278,7 @@ public final class StageOneLevelScreen extends Pane {
                 + "-fx-border-width:2;"
                 + "-fx-padding:5 14 5 14;");
 
-        Label quickTitle = label("БЫСТРЫЙ ДОСТУП  [ 1—5 ]", 13, "#e7b95d");
+        Label quickTitle = label("QUICK ACCESS  [ 1—5 ]", 13, "#e7b95d");
         quickTitle.relocate(42, 105);
         quickTitle.setPrefSize(390, 24);
 
@@ -331,15 +331,15 @@ public final class StageOneLevelScreen extends Pane {
         waveTransitionOverlay.setVisible(false);
 
         Rectangle completeCard = card(570, 360, 780, 300);
-        Label completeTitle = label("ЭТАП 1 ЗАВЕРШЁН", 32, "#f6cf7a");
+        Label completeTitle = label("STAGE 1 CLEARED", 32, "#f6cf7a");
         completeTitle.relocate(650, 405);
         completeTitle.setPrefSize(620, 50);
         completeTitle.setAlignment(Pos.CENTER);
-        Label completeText = label("Забытые руины очищены\nНаграды получены", 18, "#e7d9c0");
+        Label completeText = label("The Forgotten Ruins are clear\nRewards claimed", 18, "#e7d9c0");
         completeText.relocate(650, 475);
         completeText.setPrefSize(620, 70);
         completeText.setAlignment(Pos.CENTER);
-        MenuButton continueButton = new MenuButton("ПЕРЕЙТИ НА РЫНОК", 420, 62);
+        MenuButton continueButton = new MenuButton("GO TO MARKET", 420, 62);
         continueButton.relocate(750, 570);
         continueButton.setOnAction(() -> {
             stop();
@@ -349,15 +349,15 @@ public final class StageOneLevelScreen extends Pane {
         completionOverlay.setVisible(false);
 
         Rectangle defeatCard = card(570, 360, 780, 300);
-        Label defeatTitle = label("ГЕРОЙ ПАЛ", 32, "#ef8d81");
+        Label defeatTitle = label("HERO FALLEN", 32, "#ef8d81");
         defeatTitle.relocate(650, 415);
         defeatTitle.setPrefSize(620, 50);
         defeatTitle.setAlignment(Pos.CENTER);
-        Label defeatText = label("Вернись на рынок и подготовься лучше", 17, "#e7d9c0");
+        Label defeatText = label("Return to the market and prepare better", 17, "#e7d9c0");
         defeatText.relocate(650, 490);
         defeatText.setPrefSize(620, 40);
         defeatText.setAlignment(Pos.CENTER);
-        MenuButton returnButton = new MenuButton("ВЕРНУТЬСЯ НА РЫНОК", 420, 62);
+        MenuButton returnButton = new MenuButton("RETURN TO MARKET", 420, 62);
         returnButton.relocate(750, 570);
         returnButton.setOnAction(() -> {
             player.heal(player.getMaxHealth());
@@ -388,7 +388,7 @@ public final class StageOneLevelScreen extends Pane {
         }
         updateWave(dt);
         healthHud.setHealth(player.getHealth(), player.getMaxHealth());
-        coinLabel.setText(wallet.getBalance() + " МОНЕТ");
+        coinLabel.setText(wallet.getBalance() + " COINS");
 
         if (!player.isAlive()) {
             gameOver = true;
@@ -552,24 +552,24 @@ public final class StageOneLevelScreen extends Pane {
 
     private void updateWave(double dt) {
         long living = enemies.stream().filter(Enemy::isAlive).count();
-        enemyCount.setText("ВРАГОВ: " + living);
+        enemyCount.setText("ENEMIES: " + living);
 
         if (living == 0 && waveTransition < 0) {
             projectiles.clear();
             if (waveNumber < LAST_WAVE) {
                 waveTransition = INTER_WAVE_SECONDS;
                 showWaveTransition(waveNumber, waveNumber + 1);
-                message.setText("ВОЛНА " + waveNumber + " ОЧИЩЕНА");
+                message.setText("WAVE " + waveNumber + " CLEARED");
             } else {
                 waveTransition = 1.4;
-                message.setText("ХРАНИТЕЛЬ РУН ПОБЕЖДЁН");
+                message.setText("RUNE KEEPER DEFEATED");
             }
         }
 
         if (waveTransition >= 0) {
             if (waveNumber < LAST_WAVE && waveTransitionOverlay.isVisible()) {
                 int seconds = Math.max(1, (int) Math.ceil(waveTransition));
-                transitionCountdown.setText("ВОЛНА " + (waveNumber + 1) + " ЧЕРЕЗ " + seconds);
+                transitionCountdown.setText("WAVE " + (waveNumber + 1) + " IN " + seconds);
             }
             waveTransition -= dt;
             if (waveTransition <= 0) {
@@ -606,8 +606,8 @@ public final class StageOneLevelScreen extends Pane {
 
         updateWaveDiamonds(number);
         message.setText(number == LAST_WAVE
-                ? "ФИНАЛЬНАЯ ВОЛНА — ХРАНИТЕЛЬ РУН"
-                : "ВОЛНА " + number + " НАЧАЛАСЬ");
+                ? "FINAL WAVE — RUNE KEEPER"
+                : "WAVE " + number + " STARTED");
         waveTransition = -1;
     }
 
@@ -621,8 +621,8 @@ public final class StageOneLevelScreen extends Pane {
     }
 
     private void showWaveTransition(int completedWave, int nextWave) {
-        transitionTitle.setText("ВОЛНА " + completedWave + " ЗАВЕРШЕНА");
-        transitionCountdown.setText("ВОЛНА " + nextWave + " ЧЕРЕЗ 4");
+        transitionTitle.setText("WAVE " + completedWave + " COMPLETE");
+        transitionCountdown.setText("WAVE " + nextWave + " IN 4");
         waveTransitionOverlay.setVisible(true);
     }
 
@@ -669,7 +669,7 @@ public final class StageOneLevelScreen extends Pane {
         if (!target.isAlive()) {
             enemySprites.get(target).setVisible(false);
             bar.setVisible(false);
-            coinLabel.setText(wallet.getBalance() + " МОНЕТ");
+            coinLabel.setText(wallet.getBalance() + " COINS");
         }
     }
 
@@ -794,7 +794,7 @@ public final class StageOneLevelScreen extends Pane {
         if (stageComplete || gameOver || index < 0 || index >= quickItems.length) return;
         Item item = quickItems[index];
         if (item == null) {
-            showQuickStatus("ЯЧЕЙКА " + (index + 1) + " ПУСТА");
+            showQuickStatus("SLOT " + (index + 1) + " IS EMPTY");
             return;
         }
 
@@ -807,11 +807,11 @@ public final class StageOneLevelScreen extends Pane {
 
     private void usePotion(Potion potion) {
         if (potion.getPotionType() != PotionType.HEALTH) {
-            showQuickStatus("ЭТО ЗЕЛЬЕ ПОКА НЕЛЬЗЯ ИСПОЛЬЗОВАТЬ");
+            showQuickStatus("THIS POTION CANNOT BE USED YET");
             return;
         }
         if (player.getHealth() >= player.getMaxHealth()) {
-            showQuickStatus("ЗДОРОВЬЕ УЖЕ ПОЛНОЕ");
+            showQuickStatus("HEALTH IS ALREADY FULL");
             return;
         }
 
@@ -819,27 +819,27 @@ public final class StageOneLevelScreen extends Pane {
         player.heal(potion.getEffectAmount());
         inventory.removeItem(potion);
         healthHud.setHealth(player.getHealth(), player.getMaxHealth());
-        showQuickStatus("ЗЕЛЬЕ: +" + (player.getHealth() - before) + " ЗДОРОВЬЯ");
+        showQuickStatus("POTION: +" + (player.getHealth() - before) + " HEALTH");
         refreshQuickBar();
     }
 
     private void equipWeapon(Weapon weapon) {
         if (inventory.getEquippedWeapon().map(current -> current == weapon).orElse(false)) {
-            showQuickStatus("ЭТОТ МЕЧ УЖЕ ЭКИПИРОВАН");
+            showQuickStatus("THIS SWORD IS ALREADY EQUIPPED");
             return;
         }
         if (loadout.getInstalledRunes().size() > weapon.getRuneSlotCount()) {
-            showQuickStatus("В НОВОМ МЕЧЕ НЕДОСТАТОЧНО СЛОТОВ РУН");
+            showQuickStatus("THE NEW SWORD HAS TOO FEW RUNE SLOTS");
             return;
         }
 
         try {
             inventory.equipWeapon(weapon, player.getCharacterClass());
             loadout.changeWeapon(weapon);
-            showQuickStatus("ЭКИПИРОВАН: " + weapon.getName().toUpperCase());
+            showQuickStatus("EQUIPPED: " + weapon.getName().toUpperCase());
             refreshQuickBar();
         } catch (IllegalArgumentException | IllegalStateException exception) {
-            showQuickStatus("НЕЛЬЗЯ ЭКИПИРОВАТЬ ЭТОТ МЕЧ");
+            showQuickStatus("THIS SWORD CANNOT BE EQUIPPED");
         }
     }
 

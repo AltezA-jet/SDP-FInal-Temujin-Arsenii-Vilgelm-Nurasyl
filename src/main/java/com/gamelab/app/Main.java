@@ -20,6 +20,8 @@ import com.gamelab.pattern.observer.GameEventBus;
 import com.gamelab.ui.character.CharacterCreationScreen;
 import com.gamelab.ui.menu.MenuScreen;
 import com.gamelab.ui.menu.GameMenuScreen;
+import com.gamelab.ui.menu.SettingsScreen;
+import com.gamelab.ui.ShadowfallUi;
 import com.gamelab.ui.level.TutorialLevelScreen;
 import com.gamelab.application.arena.CampaignRun;
 import com.gamelab.ui.inventory.InventoryScreen;
@@ -28,6 +30,7 @@ import com.gamelab.ui.shop.StageOneMarketScreen;
 import com.gamelab.ui.audio.CombatAudio;
 import com.gamelab.ui.audio.JavaSoundPlayer;
 import javafx.scene.control.Button;
+import java.util.prefs.Preferences;
 
 
 /**
@@ -51,6 +54,7 @@ public class Main extends Application {
     private EnemyArenaScreen campaignArena;
     private CombatAudio campaignAudio;
     private boolean tutorialCompleted;
+    private final Preferences preferences = Preferences.userNodeForPackage(Main.class);
 
     public static void main(String[] args) {
         launch(args);
@@ -87,6 +91,7 @@ public class Main extends Application {
         });
 
         stage.setTitle(TITLE);
+        stage.setFullScreen(preferences.getBoolean("fullscreen", false));
         stage.setScene(scene);
         showFixedScreen(menu);
         stage.setMinWidth(960);
@@ -116,7 +121,9 @@ public class Main extends Application {
         campaignRuneLoadout = new RuneLoadout(starterSword);
         campaignRuneService = new RuneService(new GameEventBus());
         campaignRun=new CampaignRun(player,campaignInventory,campaignWallet,campaignRuneLoadout);
-        campaignAudio=new CombatAudio(campaignRun.events(),new JavaSoundPlayer());
+        JavaSoundPlayer soundPlayer=new JavaSoundPlayer();
+        soundPlayer.setVolume(preferences.getDouble("sfxVolume", .65));
+        campaignAudio=new CombatAudio(campaignRun.events(),soundPlayer);
         showFixedScreen(new TutorialLevelScreen(player, this::onTutorialCompleted));
     }
 
@@ -179,19 +186,33 @@ public class Main extends Application {
         gameMenu=new GameMenuScreen(campaignPlayer,resume,campaignInventory,this::showInventory,campaignWallet);
         gameMenu.setShopAvailable(campaignArena==null);
         gameMenu.setOnShop(inventory -> showCampaignMarket(campaignRun.completedStage()));
-        Button menuButton=new Button("В главное меню"); menuButton.relocate(1350,1010);
+        Button menuButton=new Button("Main Menu"); menuButton.relocate(1350,1010);
         menuButton.setStyle("-fx-font-size:20px;");menuButton.setOnAction(e -> returnToMenu());
         gameMenu.getChildren().add(menuButton);showFixedScreen(gameMenu);
     }
 
     private void showCampaignVictory() {
         Pane victory=new Pane();victory.setPrefSize(1920,1080);victory.setStyle("-fx-background-color:#100d18;");
-        javafx.scene.control.Label title=new javafx.scene.control.Label("ТЁМНЫЙ ЛОРД ПОВЕРЖЕН");
-        title.setStyle("-fx-text-fill:#f2d08a;-fx-font-size:48px;");title.relocate(570,330);
-        javafx.scene.control.Label result=new javafx.scene.control.Label(campaignPlayer.getName()+" · Уровень "+campaignPlayer.getLevel()+" · "+campaignWallet.getBalance()+" монет");
-        result.setStyle("-fx-text-fill:#eadbc2;-fx-font-size:28px;");result.relocate(620,450);
-        Button back=new Button("В главное меню");back.setStyle("-fx-font-size:25px;");back.relocate(810,580);back.setOnAction(e -> returnToMenu());
-        victory.getChildren().addAll(title,result,back);showFixedScreen(victory);
+        javafx.scene.layout.VBox content=new javafx.scene.layout.VBox(24);
+        content.setAlignment(javafx.geometry.Pos.CENTER);content.setPrefWidth(720);content.setLayoutX(600);content.setLayoutY(225);
+        javafx.scene.control.Label title=new javafx.scene.control.Label("DARK LORD DEFEATED");
+        title.setMaxWidth(Double.MAX_VALUE);title.setAlignment(javafx.geometry.Pos.CENTER);
+        title.setStyle("-fx-text-fill:#f2d08a;-fx-font-family:'Serif';-fx-font-weight:bold;-fx-font-size:48px;");
+        javafx.scene.layout.GridPane stats=new javafx.scene.layout.GridPane();stats.setHgap(48);stats.setVgap(16);
+        stats.setAlignment(javafx.geometry.Pos.CENTER);stats.setStyle("-fx-padding:26 42 26 42;-fx-background-color:#1c1624;-fx-border-color:#9b7040;-fx-border-width:2;");
+        addVictoryStat(stats,0,"Hero",campaignPlayer.getName());
+        addVictoryStat(stats,1,"Level Reached",Integer.toString(campaignPlayer.getLevel()));
+        addVictoryStat(stats,2,"Coins Collected",Integer.toString(campaignWallet.getBalance()));
+        Button back=new Button("MAIN MENU");back.setMinWidth(260);back.setStyle("-fx-font-size:20px;");back.setOnAction(e -> returnToMenu());
+        content.getChildren().addAll(title,stats,back);victory.getChildren().add(content);showFixedScreen(victory);
+    }
+
+    private void addVictoryStat(javafx.scene.layout.GridPane grid,int row,String name,String value) {
+        javafx.scene.control.Label label=new javafx.scene.control.Label(name);
+        label.setMinWidth(260);label.setStyle("-fx-text-fill:#c6a96d;-fx-font-size:20px;-fx-font-weight:bold;");
+        javafx.scene.control.Label data=new javafx.scene.control.Label(value);
+        data.setMinWidth(260);data.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);data.setStyle("-fx-text-fill:#eadbc2;-fx-font-size:20px;");
+        grid.addRow(row,label,data);
     }
 
     private void returnToMenu() {
@@ -209,6 +230,7 @@ public class Main extends Application {
     private void showFixedScreen(Pane screen) {
         Pane root = new Pane();
         root.setStyle("-fx-background-color:black;");
+        ShadowfallUi.install(root);
         screen.setManaged(false);
         root.getChildren().add(screen);
         Runnable resize = () -> {
@@ -232,12 +254,14 @@ public class Main extends Application {
     }
 
     private void onSettings() {
-        // TODO: open the settings screen
-        System.out.println("[Shadowfall] Settings");
+        if(menu!=null) menu.stop();
+        showFixedScreen(new SettingsScreen(preferences.getDouble("sfxVolume",.65),stage.isFullScreen(),
+                value->{preferences.putDouble("sfxVolume",value);if(campaignAudio!=null)campaignAudio.setVolume(value);},
+                value->{preferences.putBoolean("fullscreen",value);stage.setFullScreen(value);},this::returnToMenu));
     }
 
     private void addArenaButton() {
-        Button button = new Button("АРЕНА ВРАГОВ / F6");
+        Button button = new Button("ENEMY ARENA / F6");
         button.setStyle("-fx-font-size: 22px; -fx-text-fill: #f2d08a; -fx-background-color: #211729; -fx-border-color: #9b7040; -fx-padding: 14 24;");
         button.relocate(1490, 970);
         button.setOnAction(event -> openEnemyArena());

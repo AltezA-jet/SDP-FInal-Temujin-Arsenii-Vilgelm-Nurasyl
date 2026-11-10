@@ -31,18 +31,18 @@ public final class CharacterCreationScreen extends Pane {
     private static final double PREVIEW_SIZE = H * 190.0 / 1080.0;
     private static final double PREVIEW_WIDTH = PREVIEW_SIZE * 64.0 / 96.0;
     private static final String[] CLASSES = {"WARRIOR", "ARCHER", "MAGE", "ASSASSIN"};
-    private static final String[] CLASS_NAMES = {"Воин", "Лучник", "Маг", "Ассасин"};
+    private static final String[] CLASS_NAMES = {"Warrior", "Archer", "Mage", "Assassin"};
     private static final String[] CLASS_INFO = {
-            "Несокрушимый боец передовой. Высокая защита и мощные удары по площади; медлителен в движении и атаке.",
-            "Смертоносен с луком: высокая точность и скорострельность. Слаб с прочим оружием, полагается на дистанцию.",
-            "Повелевает заклинаниями. Магический урон растёт вместе с запасом маны; физическая защита низкая.",
-            "Молниеносные выпады и уклонения. Быстр, но хрупок; может переносить меньше предметов."
+            "An unyielding frontline fighter with strong defense and sweeping attacks, but slower movement and strikes.",
+            "Deadly with a bow, combining accuracy and rate of fire. Relies on range and struggles with other weapons.",
+            "Commands powerful spells. Magic damage scales with mana, while physical defense is low.",
+            "Lightning-fast attacks and evasions. Agile but fragile, with limited carrying capacity."
     };
     private static final String[][] STAT_NAMES = {
-            {"Здоровье", "Защита", "Скорость", "Скорость атаки", "Урон", "Вместимость"},
-            {"Здоровье", "Защита", "Скорость", "Скорострельность", "Точность", "Владение луком"},
-            {"Здоровье", "Защита", "Скорость", "Мана", "Магический урон", "Сила чар"},
-            {"Здоровье", "Защита", "Скорость", "Скорость атаки", "Уклонение", "Вместимость"}
+            {"Health", "Defense", "Speed", "Attack Speed", "Damage", "Capacity"},
+            {"Health", "Defense", "Speed", "Rate of Fire", "Accuracy", "Bow Mastery"},
+            {"Health", "Defense", "Speed", "Mana", "Magic Damage", "Spell Power"},
+            {"Health", "Defense", "Speed", "Attack Speed", "Evasion", "Capacity"}
     };
     private static final int[][] STATS = {
             {82, 92, 34, 38, 88, 76}, {66, 48, 70, 88, 94, 90},
@@ -63,7 +63,7 @@ public final class CharacterCreationScreen extends Pane {
     private final java.util.List<MenuButton> menuButtons = new java.util.ArrayList<>();
     private final Label description = new Label(), stats = new Label(), notice = new Label();
     private final Label hairColorValue = new Label(), shirtColorValue = new Label(), pantsColorValue = new Label(), bootsColorValue = new Label(), headwearColorValue = new Label();
-    private final TextField name = new TextField("Герой");
+    private final TextField name = new TextField("Hero");
     private int selectedClass, gender, color, shirtColor, pantsColor, bootsColor, headwear = -1;
     private double time;
     private long last;
@@ -150,14 +150,14 @@ public final class CharacterCreationScreen extends Pane {
         appearanceCard(1464, 702, 354, 105);
         Label headwearTitle=label("05  ГОЛОВНОЙ УБОР",13,"#edcf8c");headwearTitle.setLayoutX(1480);headwearTitle.setLayoutY(714);getChildren().add(headwearTitle);
         configureValueLabel(headwearColorValue,1674,710,124);getChildren().add(headwearColorValue);
-        MenuButton noHat = new MenuButton("БЕЗ УБОРА", 104, 44);
+        MenuButton noHat = new MenuButton("NO HEADWEAR", 120, 44);
         noHat.setOnAction(() -> { headwear = -1; refresh(); });
         noHat.setLayoutX(1480); noHat.setLayoutY(744);
         headwearButtons[0] = noHat; menuButtons.add(noHat); getChildren().add(noHat);
         for(int i=0;i<5;i++){final int n=i;MenuButton sw=colorSlot(()->{headwear=n;refresh();},40,44,OUTFIT_COLORS[i]);sw.setLayoutX(1594+i*43);sw.setLayoutY(744);headwearButtons[i+1]=sw;getChildren().add(sw);}
 
         Label nameLabel=label("ИМЯ ГЕРОЯ",14,"#edcf8c");nameLabel.setLayoutX(1464);nameLabel.setLayoutY(824);getChildren().add(nameLabel);
-        name.setLayoutX(1464);name.setLayoutY(850);name.setPrefSize(354,48);name.setPromptText("Введите имя");
+        name.setLayoutX(1464);name.setLayoutY(850);name.setPrefSize(354,48);name.setPromptText("Enter a name");
         name.setStyle("-fx-background-color:#100e1b;-fx-text-fill:#f2dfb6;-fx-prompt-text-fill:#806b54;-fx-font-size:17px;-fx-border-color:#9b7040;-fx-border-width:1.5;-fx-background-radius:0;-fx-border-radius:0;");getChildren().add(name);
 
         MenuButton back=imageButton("/assets/ui/buttons/labels/label_back_to_menu.png",()->{animation.stop();onBack.run();},240,62);back.setLayoutX(685);back.setLayoutY(967);getChildren().add(back);

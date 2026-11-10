@@ -67,7 +67,7 @@ public final class StageOneMarketScreen extends Pane {
     private final GridPane inventoryGrid = new GridPane();
     private final Label coinBalance = text("", 25, "#ffe29b");
     private final Label inventoryCount = text("", 18, "#d7c1a1");
-    private final Label status = text("ВЫБЕРИТЕ ТОВАР У КУПЦА", 17, "#f3d69b");
+    private final Label status = text("CHOOSE AN ITEM FROM THE MERCHANT", 17, "#f3d69b");
     private final MenuButton[] shopFilterButtons = new MenuButton[4];
     private ShopFilter shopFilter = ShopFilter.ALL;
 
@@ -140,8 +140,8 @@ public final class StageOneMarketScreen extends Pane {
 
     private void buildHeader() {
         String heading = completedStage == 0
-                ? "ТРЕНИРОВКА ЗАВЕРШЕНА  //  ВЕЧЕРНИЙ РЫНОК"
-                : "ЭТАП "+completedStage+" ЗАВЕРШЁН  //  ВЕЧЕРНИЙ РЫНОК";
+                ? "TUTORIAL COMPLETE  //  NIGHT MARKET"
+                : "STAGE "+completedStage+" COMPLETE  //  NIGHT MARKET";
         Label title = text(heading, 31, "#f6cf7a");
         title.relocate(58, 30);
         title.setPrefSize(1050, 52);
@@ -155,12 +155,12 @@ public final class StageOneMarketScreen extends Pane {
 
     private void buildShop() {
         VBox panel = panel(48, 142, 650, 800);
-        Label title = text("МАГАЗИН КУПЦА", 28, "#f6cf7a");
-        Label subtitle = text("Выберите категорию и товар", 14, "#cbb99f");
+        Label title = text("MERCHANT", 28, "#f6cf7a");
+        Label subtitle = text("Choose a category and item", 14, "#cbb99f");
 
         HBox filters = new HBox(8);
         filters.setAlignment(Pos.CENTER);
-        String[] names = {"ВСЕ", "ОРУЖИЕ", "РУНЫ", "РАСХОДНИКИ"};
+        String[] names = {"ALL", "WEAPONS", "RUNES", "CONSUMABLES"};
         ShopFilter[] values = ShopFilter.values();
 
         for (int index = 0; index < values.length; index++) {
@@ -197,7 +197,7 @@ public final class StageOneMarketScreen extends Pane {
 
     private void buildInventory() {
         VBox panel = panel(1222, 142, 650, 800);
-        Label title = text("ИНВЕНТАРЬ", 28, "#f6cf7a");
+        Label title = text("INVENTORY", 28, "#f6cf7a");
         inventoryCount.setAlignment(Pos.CENTER_RIGHT);
         inventoryCount.setPrefWidth(560);
 
@@ -214,12 +214,12 @@ public final class StageOneMarketScreen extends Pane {
         status.setAlignment(Pos.CENTER);
         status.setWrapText(true);
 
-        MenuButton back = new MenuButton("НАЗАД", 240, 60);
+        MenuButton back = new MenuButton("BACK", 240, 60);
         back.relocate(60, 997);
         back.setOnAction(onBack);
 
         MenuButton next = new MenuButton(
-                completedStage==5 ? "К ТЁМНОМУ ЛОРДУ" : "ПЕРЕЙТИ К ЭТАПУ "+(completedStage+1),
+                completedStage==5 ? "FACE THE DARK LORD" : "ПЕРЕЙТИ К ЭТАПУ "+(completedStage+1),
                 420,
                 60
         );
@@ -229,8 +229,8 @@ public final class StageOneMarketScreen extends Pane {
     }
 
     private void refresh() {
-        coinBalance.setText(wallet.getBalance() + " МОНЕТ");
-        inventoryCount.setText(inventory.getSize() + " / " + inventory.getCapacity() + " ЯЧЕЕК");
+        coinBalance.setText(wallet.getBalance() + " COINS");
+        inventoryCount.setText(inventory.getSize() + " / " + inventory.getCapacity() + " SLOTS");
         renderShop();
         renderInventory();
     }
@@ -255,7 +255,7 @@ public final class StageOneMarketScreen extends Pane {
             description.setAlignment(Pos.CENTER);
             description.setPrefSize(245, 44);
             Label price = text(
-                    alreadyOwned ? "УЖЕ КУПЛЕНО" : item.getPrice() + " монет",
+                    alreadyOwned ? "ALREADY OWNED" : item.getPrice() + " coins",
                     15,
                     alreadyOwned ? "#9ee493" : "#f6c96b"
             );
@@ -312,7 +312,7 @@ public final class StageOneMarketScreen extends Pane {
                 name.setPrefWidth(116);
                 slot.getChildren().addAll(image(ItemSpriteResolver.resolve(item), 48), name);
             } else {
-                Label empty = text("ПУСТО", 12, "#71677b");
+                Label empty = text("EMPTY", 12, "#71677b");
                 slot.getChildren().add(empty);
             }
             inventoryGrid.add(slot, index % 4, index / 4);
@@ -326,7 +326,7 @@ public final class StageOneMarketScreen extends Pane {
                 wallet,
                 inventory
         );
-        status.setText(result.success() ? "КУПЛЕНО: " + item.getName() : result.message());
+        status.setText(result.success() ? "PURCHASED: " + item.getName() : result.message());
         status.setTextFill(Color.web(result.success() ? "#9ee493" : "#f09a8f"));
         refresh();
     }
@@ -361,3 +361,4 @@ public final class StageOneMarketScreen extends Pane {
         return image;
     }
 }
+
