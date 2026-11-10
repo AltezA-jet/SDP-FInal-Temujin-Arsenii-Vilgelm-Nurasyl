@@ -59,14 +59,19 @@ public final class ItemSpriteResolver {
     private static String resolveWeapon(
             Weapon weapon
     ) {
-        String name = weapon.getName().toLowerCase(Locale.ROOT);
-        if (name.contains("bow")) return "/assets/All/Inventory_shop_items/Bow/" + switch (weapon.getUpgradeLevel()) {
-            case 1 -> "Bow_Start.png";
-            case 2 -> "Bow_Light.png";
-            case 3 -> "Bow_Hunter.png";
-            case 4 -> "Bow_Long.png";
-            case 5 -> "Bow_Dark.png";
-            default -> throw new IllegalArgumentException("Unknown bow level");
+        String weaponClass = weapon.getRequiredClass().toUpperCase(Locale.ROOT);
+        int level = weapon.getUpgradeLevel();
+        if (weaponClass.equals("ARCHER")) return "/assets/All/Inventory_shop_items/Bow/" + switch (level) {
+            case 1 -> "Bow_Start.png"; case 2 -> "Bow_Light.png"; case 3 -> "Bow_Hunter.png"; case 4 -> "Bow_Long.png"; case 5 -> "Bow_Dark.png"; default -> throw new IllegalArgumentException("Unknown bow level");
+        };
+        if (weaponClass.equals("MAGE")) return "/assets/All/Inventory_shop_items/Staff/" + switch (level) {
+            case 1 -> "Staff_Start.png"; case 2 -> "Staff_Arcane.png"; case 3 -> "Staff_Dark.png"; case 4 -> "Staff_Holy.png"; case 5 -> "Staff_Nature.png"; default -> throw new IllegalArgumentException("Unknown staff level");
+        };
+        if (weaponClass.equals("ASSASSIN")) return "/assets/All/Inventory_shop_items/Dager/" + switch (level) {
+            case 1 -> "Dagger_Start.png"; case 2 -> "Dagger_Curved.png"; case 3 -> "Dagger_Royal.png"; case 4 -> "Dagger_Shadow.png"; case 5 -> "Dagger_Venom.png"; default -> throw new IllegalArgumentException("Unknown dagger level");
+        };
+        if (weaponClass.equals("KNIGHT")) return "/assets/All/Inventory_shop_items/Sword/" + switch (level) {
+            case 1 -> "starter_sword.png"; case 2 -> "swift_blade.png"; case 3 -> "greatsword.png"; case 4 -> "darksteel_sword.png"; case 5 -> "Ancient_Blade.png"; default -> throw new IllegalArgumentException("Unknown sword level");
         };
         String fileName = switch (
                 weapon.getUpgradeLevel()
